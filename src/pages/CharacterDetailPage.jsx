@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Play, Pause, RotateCcw, FastForward, PenTool, CheckCircle, AlertCircle, BookOpen, ArrowLeft } from 'lucide-react';
 import { createStrokeWriter } from '../engine/strokeWriter';
 import { StrokeAnimatorController } from '../engine/strokeAnimator';
@@ -7,6 +7,7 @@ import { useDictionary } from '../hooks/useDictionary';
 
 export function CharacterDetailPage() {
   const { word: wordParam } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { words, getWordsByChar } = useDictionary();
 
@@ -22,7 +23,12 @@ export function CharacterDetailPage() {
   const chars = wordObj?.chars || [wordObj?.word || ''];
 
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
-  const [mode, setMode] = useState('animate'); // 'animate' | 'practice'
+  const initialMode = searchParams.get('mode') === 'practice' ? 'practice' : 'animate';
+  const [mode, setMode] = useState(initialMode); // 'animate' | 'practice'
+
+  useEffect(() => {
+    setMode(searchParams.get('mode') === 'practice' ? 'practice' : 'animate');
+  }, [searchParams]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1.0);
   const [highlightRadicals, setHighlightRadicals] = useState(true);

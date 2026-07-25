@@ -42,20 +42,6 @@ export function Navbar({ srsStats }) {
             </NavLink>
 
             <NavLink
-              to="/practice"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-rose-600 text-white shadow-md shadow-rose-950/50'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                }`
-              }
-            >
-              <PenTool className="w-4 h-4" />
-              <span className="hidden sm:inline">Stroke Practice</span>
-            </NavLink>
-
-            <NavLink
               to="/flashcards"
               className={({ isActive }) =>
                 `relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${

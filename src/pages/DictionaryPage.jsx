@@ -14,9 +14,9 @@ export function DictionaryPage() {
     navigate(`/character/${encodeURIComponent(word.word)}`);
   };
 
-  // Practice button → Stroke practice page
+  // Practice button → Direct practice mode on character page
   const handlePracticeClick = (word) => {
-    navigate(`/practice/${encodeURIComponent(word.word)}`);
+    navigate(`/character/${encodeURIComponent(word.word)}?mode=practice`);
   };
 
   return (

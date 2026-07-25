@@ -1,11 +1,15 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { DictionaryPage } from './pages/DictionaryPage';
-import { PracticePage } from './pages/PracticePage';
 import { FlashcardsPage } from './pages/FlashcardsPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { useSRS } from './hooks/useSRS';
+
+function PracticeRedirect() {
+  const { char } = useParams();
+  return <Navigate to={`/character/${encodeURIComponent(char)}?mode=practice`} replace />;
+}
 
 function AppContent() {
   const { stats: srsStats } = useSRS();
@@ -21,8 +25,8 @@ function AppContent() {
           <Route path="/" element={<Navigate to="/dictionary" replace />} />
           <Route path="/dictionary" element={<DictionaryPage />} />
           <Route path="/character/:word" element={<CharacterDetailPage />} />
-          <Route path="/practice" element={<PracticePage />} />
-          <Route path="/practice/:char" element={<PracticePage />} />
+          <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
+          <Route path="/practice/:char" element={<PracticeRedirect />} />
           <Route path="/flashcards" element={<FlashcardsPage />} />
           <Route path="*" element={<Navigate to="/dictionary" replace />} />
         </Routes>
