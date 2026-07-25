@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { DictionaryPage } from './pages/DictionaryPage';
+import { BookmarkPage } from './pages/BookmarkPage';
 import { FlashcardsPage } from './pages/FlashcardsPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { useSRS } from './hooks/useSRS';
@@ -20,10 +21,11 @@ function AppContent() {
       <Navbar srsStats={srsStats} />
 
       {/* Main Content Container with Client-side Routes */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-28">
         <Routes>
           <Route path="/" element={<Navigate to="/dictionary" replace />} />
           <Route path="/dictionary" element={<DictionaryPage />} />
+          <Route path="/bookmark" element={<BookmarkPage />} />
           <Route path="/character/:word" element={<CharacterDetailPage />} />
           <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
           <Route path="/practice/:char" element={<PracticeRedirect />} />
@@ -33,7 +35,7 @@ function AppContent() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-900 py-6 text-center text-xs text-slate-500 glass-panel mt-auto">
+      <footer className="w-full border-t border-slate-900 py-6 text-center text-xs text-slate-500 glass-panel mt-auto mb-20 sm:mb-24">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="font-chinese font-bold text-slate-300">BiHua (筆畫)</span> — HSK 1-6 Chinese Character Learning

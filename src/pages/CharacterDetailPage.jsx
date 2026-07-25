@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Play, Pause, RotateCcw, FastForward, PenTool, CheckCircle, AlertCircle, BookOpen, ArrowLeft } from 'lucide-react';
+import { Play, Pause, RotateCcw, FastForward, PenTool, CheckCircle, AlertCircle, BookOpen, ArrowLeft, Bookmark } from 'lucide-react';
 import { createStrokeWriter } from '../engine/strokeWriter';
 import { StrokeAnimatorController } from '../engine/strokeAnimator';
 import { useDictionary } from '../hooks/useDictionary';
+import { useBookmarks } from '../hooks/useBookmarks';
 
 export function CharacterDetailPage() {
   const { word: wordParam } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { words, getWordsByChar } = useDictionary();
+  const { isBookmarked, toggleBookmark } = useBookmarks();
 
   const decodedWord = wordParam ? decodeURIComponent(wordParam) : '';
   const wordObj = words.find(w => w.word === decodedWord) || {
@@ -20,6 +22,8 @@ export function CharacterDetailPage() {
     chars: [decodedWord]
   };
 
+  const bookmarked = isBookmarked(wordObj.word);
+
   const chars = wordObj?.chars || [wordObj?.word || ''];
 
   const [selectedCharIndex, setSelectedCharIndex] = useState(0);
@@ -29,6 +33,7 @@ export function CharacterDetailPage() {
   useEffect(() => {
     setMode(searchParams.get('mode') === 'practice' ? 'practice' : 'animate');
   }, [searchParams]);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1.0);
   const [highlightRadicals, setHighlightRadicals] = useState(true);
@@ -132,17 +137,31 @@ export function CharacterDetailPage() {
       <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-700/80 shadow-2xl">
 
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="font-chinese text-5xl font-extrabold text-white tracking-tight">
-              {wordObj.word}
-            </h1>
-            <span className="text-sm font-semibold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-              HSK {wordObj.level}
-            </span>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="font-chinese text-5xl font-extrabold text-white tracking-tight">
+                {wordObj.word}
+              </h1>
+              <span className="text-sm font-semibold px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                HSK {wordObj.level}
+              </span>
+            </div>
+            <div className="text-lg font-semibold text-rose-400">{wordObj.pinyin}</div>
+            <div className="text-sm text-slate-300 mt-0.5">{wordObj.english}</div>
           </div>
-          <div className="text-lg font-semibold text-rose-400">{wordObj.pinyin}</div>
-          <div className="text-sm text-slate-300 mt-0.5">{wordObj.english}</div>
+
+          <button
+            onClick={() => toggleBookmark(wordObj.word)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+              bookmarked
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                : 'bg-slate-900/80 text-slate-400 hover:text-white border-slate-800'
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${bookmarked ? 'fill-amber-300' : ''}`} />
+            <span>{bookmarked ? 'Bookmarked' : 'Bookmark'}</span>
+          </button>
         </div>
 
         {/* Multi-Character Tabs */}
