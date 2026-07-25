@@ -7,6 +7,12 @@ db.version(1).stores({
   reviews: 'char, due, state, hskLevel, lastReviewed'
 });
 
+db.version(2).stores({
+  reviews: 'char, due, state, hskLevel, lastReviewed',
+  review_logs: '++id, date, char, rating',
+  settings: 'key'
+});
+
 export async function getReviewForChar(char) {
   try {
     return await db.reviews.get(char);
@@ -24,6 +30,47 @@ export async function saveReviewForChar(char, reviewData) {
     });
   } catch (err) {
     console.error('Dexie put error:', err);
+  }
+}
+
+export async function logReview(char, rating) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await db.review_logs.add({
+      date: today,
+      timestamp: new Date().toISOString(),
+      char,
+      rating
+    });
+  } catch (err) {
+    console.error('Dexie log error:', err);
+  }
+}
+
+export async function getReviewLogs() {
+  try {
+    return await db.review_logs.toArray();
+  } catch (err) {
+    console.error('Dexie fetch logs error:', err);
+    return [];
+  }
+}
+
+export async function getSetting(key, defaultValue = null) {
+  try {
+    const item = await db.settings.get(key);
+    return item ? item.value : defaultValue;
+  } catch (err) {
+    console.error('Dexie setting get error:', err);
+    return defaultValue;
+  }
+}
+
+export async function setSetting(key, value) {
+  try {
+    await db.settings.put({ key, value });
+  } catch (err) {
+    console.error('Dexie setting put error:', err);
   }
 }
 
