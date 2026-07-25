@@ -60,20 +60,16 @@ export class StrokeAnimatorController {
 
   setSpeed(newSpeed) {
     this.speed = newSpeed;
-    if (this.writer) {
-      this.writer.updateOptions({
-        strokeAnimationSpeed: newSpeed
-      });
+    if (this.writer && this.writer._options) {
+      this.writer._options.strokeAnimationSpeed = newSpeed;
     }
   }
 
   toggleRadicalHighlight(enable) {
     this.highlightRadicals = enable;
     if (this.writer) {
-      // HanziWriter handles radical color automatically if set in options
-      this.writer.updateOptions({
-        radicalColor: enable ? '#f43f5e' : '#0f172a'
-      });
+      // HanziWriter API method to update colors dynamically
+      this.writer.updateColor('radicalColor', enable ? '#e11d48' : null);
     }
   }
 }

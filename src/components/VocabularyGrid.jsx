@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Play, PenTool, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export function VocabularyGrid({ words, onSelectWord }) {
+export function VocabularyGrid({ words, onSelectWord, onPracticeWord }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 24;
 
@@ -38,7 +38,7 @@ export function VocabularyGrid({ words, onSelectWord }) {
         {currentWords.map((item) => (
           <div
             key={item.id}
-            onClick={() => onSelectWord(item, 'animate')}
+            onClick={() => onSelectWord && onSelectWord(item)}
             className="group glass-card rounded-2xl p-5 cursor-pointer relative overflow-hidden flex flex-col justify-between"
           >
             {/* Top Bar: Character & Level Badge */}
@@ -68,16 +68,17 @@ export function VocabularyGrid({ words, onSelectWord }) {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectWord(item, 'animate');
+                  onSelectWord && onSelectWord(item);
                 }}
                 className="flex items-center gap-1 hover:text-rose-400 transition-colors font-medium"
               >
-                <Play className="w-3.5 h-3.5" /> Animate
+                <Play className="w-3.5 h-3.5" /> Details & Animate
               </button>
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectWord(item, 'practice');
+                  (onPracticeWord ?? onSelectWord)?.(item);
                 }}
                 className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-medium transition-colors border border-rose-500/20"
               >
@@ -118,3 +119,5 @@ export function VocabularyGrid({ words, onSelectWord }) {
     </div>
   );
 }
+
+export default VocabularyGrid;
