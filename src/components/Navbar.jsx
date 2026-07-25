@@ -94,8 +94,8 @@ export function Navbar({ srsStats }) {
             }
           >
             <Brain className="w-4 h-4" />
-            <span className="hidden sm:inline">SRS Flashcards</span>
-            <span className="sm:hidden">Flashcards</span>
+            <span className="hidden sm:inline">Review Center</span>
+            <span className="sm:hidden">Review</span>
             {srsStats && srsStats.dueCount > 0 && (
               <span className="absolute -top-1 -right-1 sm:relative sm:top-auto sm:right-auto inline-flex items-center justify-center text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">
                 {srsStats.dueCount}

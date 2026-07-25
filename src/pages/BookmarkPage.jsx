@@ -53,35 +53,32 @@ export function BookmarkPage() {
 
   return (
     <div className="space-y-8">
-      {/* Banner */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-800 shadow-2xl">
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 max-w-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-300 text-xs font-semibold border border-amber-500/20 mb-3">
-              <Bookmark className="w-3.5 h-3.5 fill-amber-300" /> Bookmarked Vocabulary
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 font-chinese">
-              Saved Characters ({totalBookmarks})
-            </h1>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-              Your personal collection of bookmarked Chinese characters saved locally in your browser.
-            </p>
+      {/* Clean Page Title Header */}
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+            <Bookmark className="w-5 h-5 fill-amber-400" />
           </div>
-
-          {totalBookmarks > 0 && (
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to remove all bookmarked characters?')) {
-                  clearBookmarks();
-                }
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 text-xs font-semibold transition-colors shrink-0"
-            >
-              <Trash2 className="w-4 h-4" /> Clear All
-            </button>
-          )}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-chinese">
+              Saved Words ({totalBookmarks})
+            </h1>
+            <p className="text-xs text-slate-400 font-medium">Bookmarked Chinese Vocabulary</p>
+          </div>
         </div>
+
+        {totalBookmarks > 0 && (
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to remove all bookmarked characters?')) {
+                clearBookmarks();
+              }
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 text-xs font-semibold transition-colors shrink-0"
+          >
+            <Trash2 className="w-4 h-4" /> Clear All
+          </button>
+        )}
       </div>
 
       {totalBookmarks === 0 ? (
