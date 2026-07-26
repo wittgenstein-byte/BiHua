@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { BookOpen, Bookmark, Brain, Sparkles } from 'lucide-react';
+import { BookOpen, Bookmark, Sparkles } from 'lucide-react';
 import { useBookmarks } from '../hooks/useBookmarks';
 
 export function Navbar({ srsStats }) {
@@ -45,7 +45,7 @@ export function Navbar({ srsStats }) {
 
       {/* Mobile-First Bottom Navigation Bar / Floating Dock */}
       <nav className="fixed bottom-0 inset-x-0 z-50 px-3 py-2 sm:py-3 pointer-events-none">
-        <div className="max-w-lg mx-auto pointer-events-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl shadow-rose-950/30 p-1.5 flex items-center justify-around gap-1.5 sm:gap-2">
+        <div className="max-w-md mx-auto pointer-events-auto bg-slate-900/90 backdrop-blur-xl border border-slate-800/90 rounded-2xl shadow-2xl shadow-rose-950/30 p-1.5 flex items-center justify-around gap-1.5 sm:gap-2">
           
           {/* Dictionary Tab */}
           <NavLink
@@ -78,27 +78,6 @@ export function Navbar({ srsStats }) {
             {totalBookmarks > 0 && (
               <span className="absolute -top-1 -right-1 sm:relative sm:top-auto sm:right-auto inline-flex items-center justify-center text-[10px] font-bold bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-full">
                 {totalBookmarks}
-              </span>
-            )}
-          </NavLink>
-
-          {/* SRS Flashcards Tab */}
-          <NavLink
-            to="/flashcards"
-            className={({ isActive }) =>
-              `relative flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-2 px-2.5 sm:px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                isActive
-                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-950/50'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-              }`
-            }
-          >
-            <Brain className="w-4 h-4" />
-            <span className="hidden sm:inline">Review Center</span>
-            <span className="sm:hidden">Review</span>
-            {srsStats && srsStats.dueCount > 0 && (
-              <span className="absolute -top-1 -right-1 sm:relative sm:top-auto sm:right-auto inline-flex items-center justify-center text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-full animate-pulse">
-                {srsStats.dueCount}
               </span>
             )}
           </NavLink>

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-
 import { Navbar } from './components/Navbar';
 import { DictionaryPage } from './pages/DictionaryPage';
 import { BookmarkPage } from './pages/BookmarkPage';
-import { FlashcardsPage } from './pages/FlashcardsPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
 import { useSRS } from './hooks/useSRS';
 
@@ -29,7 +28,7 @@ function AppContent() {
           <Route path="/character/:word" element={<CharacterDetailPage />} />
           <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
           <Route path="/practice/:char" element={<PracticeRedirect />} />
-          <Route path="/flashcards" element={<FlashcardsPage />} />
+          <Route path="/flashcards" element={<Navigate to="/bookmark" replace />} />
           <Route path="*" element={<Navigate to="/dictionary" replace />} />
         </Routes>
       </main>

@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Bookmark, Sparkles, Trash2 } from 'lucide-react';
+import { Bookmark, Sparkles, Trash2, LayoutGrid, Layers } from 'lucide-react';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useDictionary } from '../hooks/useDictionary';
 import { SearchBar } from '../components/SearchBar';
 import { VocabularyGrid } from '../components/VocabularyGrid';
+import { ChineseFlashcardStack } from '../components/flashcard/ChineseFlashcardStack';
 import { useNavigate } from 'react-router-dom';
 
 export function BookmarkPage() {
@@ -13,6 +14,7 @@ export function BookmarkPage() {
 
   const [query, setQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0); // 0 = All Levels
+  const [viewMode, setViewMode] = useState('stack'); // 'stack' | 'grid'
 
   // Filter dictionary words to only bookmarked words
   const bookmarkedWords = useMemo(() => {
@@ -54,7 +56,7 @@ export function BookmarkPage() {
   return (
     <div className="space-y-8">
       {/* Clean Page Title Header */}
-      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-800/80">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <Bookmark className="w-5 h-5 fill-amber-400" />
@@ -68,16 +70,43 @@ export function BookmarkPage() {
         </div>
 
         {totalBookmarks > 0 && (
-          <button
-            onClick={() => {
-              if (window.confirm('Are you sure you want to remove all bookmarked characters?')) {
-                clearBookmarks();
-              }
-            }}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 text-xs font-semibold transition-colors shrink-0"
-          >
-            <Trash2 className="w-4 h-4" /> Clear All
-          </button>
+          <div className="flex items-center gap-2">
+            {/* View Mode Switcher */}
+            <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800">
+              <button
+                onClick={() => setViewMode('stack')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'stack'
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-950/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" /> Flashcard Stack
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-950/40'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" /> Grid View
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to remove all bookmarked characters?')) {
+                  clearBookmarks();
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 text-xs font-semibold transition-colors shrink-0"
+              title="Clear All Bookmarks"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -111,12 +140,16 @@ export function BookmarkPage() {
             totalResults={filteredWords.length}
           />
 
-          {/* Vocabulary Grid */}
-          <VocabularyGrid
-            words={filteredWords}
-            onSelectWord={handleCardClick}
-            onPracticeWord={handlePracticeClick}
-          />
+          {/* Main View Mode Content */}
+          {viewMode === 'stack' ? (
+            <ChineseFlashcardStack words={filteredWords} />
+          ) : (
+            <VocabularyGrid
+              words={filteredWords}
+              onSelectWord={handleCardClick}
+              onPracticeWord={handlePracticeClick}
+            />
+          )}
         </>
       )}
     </div>
