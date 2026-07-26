@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Volume2, PenTool, Shuffle, Play, Pause, RotateCw, Moon, Sun, ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { Volume2, PenTool, Shuffle, Moon, Sun, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Stack from './Stack';
 import './WordCard.css';
@@ -8,7 +8,6 @@ export function ChineseFlashcardStack({ words = [] }) {
   const navigate = useNavigate();
   const [deck, setDeck] = useState(words);
   const [theme, setTheme] = useState('dark'); // 'dark' | 'light'
-  const [autoplay, setAutoplay] = useState(false);
   const [revealMeaning, setRevealMeaning] = useState(true);
   const [topCardIndex, setTopCardIndex] = useState(0);
 
@@ -133,9 +132,6 @@ export function ChineseFlashcardStack({ words = [] }) {
           sensitivity={140}
           sendToBackOnClick={true}
           cards={cards}
-          autoplay={autoplay}
-          autoplayDelay={3500}
-          pauseOnHover={true}
         />
       </div>
 
@@ -147,21 +143,7 @@ export function ChineseFlashcardStack({ words = [] }) {
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700/60 transition-all active:scale-95"
           title="Shuffle Deck"
         >
-          <Shuffle className="w-3.5 h-3.5 text-rose-400" /> Shuffle
-        </button>
-
-        {/* Autoplay Toggle */}
-        <button
-          onClick={() => setAutoplay(prev => !prev)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${
-            autoplay
-              ? 'bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-950/50'
-              : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 border-slate-700/60'
-          }`}
-          title={autoplay ? 'Pause Auto-cycle' : 'Start Auto-cycle'}
-        >
-          {autoplay ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
-          {autoplay ? 'Autoplay On' : 'Autoplay'}
+          <Shuffle className="w-3.5 h-3.5 text-rose-400" /> Shuffle Cards
         </button>
       </div>
     </div>
