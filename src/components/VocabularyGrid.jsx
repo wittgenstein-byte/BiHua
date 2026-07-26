@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Play, PenTool, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, PenTool, Sparkles, ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
+import { useBookmarks } from '../hooks/useBookmarks';
 
-export function VocabularyGrid({ words, onSelectWord }) {
+export function VocabularyGrid({ words, onSelectWord, onPracticeWord }) {
   const [currentPage, setCurrentPage] = useState(1);
+  const { isBookmarked, toggleBookmark } = useBookmarks();
   const itemsPerPage = 24;
 
   const totalPages = Math.ceil(words.length / itemsPerPage);
@@ -35,57 +37,77 @@ export function VocabularyGrid({ words, onSelectWord }) {
     <div className="w-full space-y-6">
       {/* Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {currentWords.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => onSelectWord(item, 'animate')}
-            className="group glass-card rounded-2xl p-5 cursor-pointer relative overflow-hidden flex flex-col justify-between"
-          >
-            {/* Top Bar: Character & Level Badge */}
-            <div>
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <span className="font-chinese text-4xl font-bold tracking-tight text-white group-hover:text-rose-300 transition-colors">
-                  {item.word}
-                </span>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${getLevelColor(item.level)}`}>
-                  HSK {item.level}
-                </span>
+        {currentWords.map((item) => {
+          const bookmarked = isBookmarked(item.word);
+          return (
+            <div
+              key={item.id}
+              onClick={() => onSelectWord && onSelectWord(item)}
+              className="group glass-card rounded-2xl p-5 cursor-pointer relative overflow-hidden flex flex-col justify-between"
+            >
+              {/* Top Bar: Character & Level Badge / Bookmark Button */}
+              <div>
+                <div className="flex items-start justify-between gap-2 mb-3">
+                  <span className="font-chinese text-4xl font-bold tracking-tight text-white group-hover:text-rose-300 transition-colors">
+                    {item.word}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${getLevelColor(item.level)}`}>
+                      HSK {item.level}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleBookmark(item.word);
+                      }}
+                      className={`p-1.5 rounded-xl border transition-all ${
+                        bookmarked
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : 'bg-slate-900/60 text-slate-400 hover:text-white border-slate-800'
+                      }`}
+                      title={bookmarked ? 'Remove Bookmark' : 'Save Bookmark'}
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${bookmarked ? 'fill-amber-300' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Pinyin */}
+                <div className="text-sm font-semibold text-rose-400 mb-1">
+                  {item.pinyin}
+                </div>
+
+                {/* English Definition */}
+                <div className="text-xs text-slate-300 line-clamp-2 font-normal leading-relaxed">
+                  {item.english}
+                </div>
               </div>
 
-              {/* Pinyin */}
-              <div className="text-sm font-semibold text-rose-400 mb-1">
-                {item.pinyin}
-              </div>
+              {/* Bottom Actions */}
+              <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectWord && onSelectWord(item);
+                  }}
+                  className="flex items-center gap-1 hover:text-rose-400 transition-colors font-medium"
+                >
+                  <Play className="w-3.5 h-3.5" /> Details & Animate
+                </button>
 
-              {/* English Definition */}
-              <div className="text-xs text-slate-300 line-clamp-2 font-normal leading-relaxed">
-                {item.english}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    (onPracticeWord ?? onSelectWord)?.(item);
+                  }}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-medium transition-colors border border-rose-500/20"
+                >
+                  <PenTool className="w-3.5 h-3.5" /> Practice
+                </button>
               </div>
             </div>
-
-            {/* Bottom Actions */}
-            <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectWord(item, 'animate');
-                }}
-                className="flex items-center gap-1 hover:text-rose-400 transition-colors font-medium"
-              >
-                <Play className="w-3.5 h-3.5" /> Animate
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelectWord(item, 'practice');
-                }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-medium transition-colors border border-rose-500/20"
-              >
-                <PenTool className="w-3.5 h-3.5" /> Practice
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Pagination Controls */}
@@ -118,3 +140,5 @@ export function VocabularyGrid({ words, onSelectWord }) {
     </div>
   );
 }
+
+export default VocabularyGrid;
