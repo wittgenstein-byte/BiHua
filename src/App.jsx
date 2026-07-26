@@ -4,7 +4,6 @@ import { Navbar } from './components/Navbar';
 import { DictionaryPage } from './pages/DictionaryPage';
 import { BookmarkPage } from './pages/BookmarkPage';
 import { CharacterDetailPage } from './pages/CharacterDetailPage';
-import { useSRS } from './hooks/useSRS';
 
 function PracticeRedirect() {
   const { char } = useParams();
@@ -12,12 +11,10 @@ function PracticeRedirect() {
 }
 
 function AppContent() {
-  const { stats: srsStats } = useSRS();
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-rose-500 selection:text-white">
       {/* Top Header Navbar */}
-      <Navbar srsStats={srsStats} />
+      <Navbar />
 
       {/* Main Content Container with Client-side Routes */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-28">
@@ -40,7 +37,7 @@ function AppContent() {
             <span className="font-chinese font-bold text-slate-300">BiHua (筆畫)</span> — HSK 1-6 Chinese Character Learning
           </div>
           <div>
-            1,800 Characters • 5,456 Vocabulary Entries • FSRS Spaced Repetition
+            1,800 Characters • 5,456 Vocabulary Entries
           </div>
         </div>
       </footer>

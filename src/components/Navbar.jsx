@@ -3,7 +3,7 @@ import { NavLink, Link } from 'react-router-dom';
 import { BookOpen, Bookmark, Sparkles } from 'lucide-react';
 import { useBookmarks } from '../hooks/useBookmarks';
 
-export function Navbar({ srsStats }) {
+export function Navbar() {
   const { totalBookmarks } = useBookmarks();
 
   return (
@@ -34,9 +34,9 @@ export function Navbar({ srsStats }) {
 
             {/* Quick Stats Pill */}
             <div className="flex items-center gap-2 sm:gap-3 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs text-slate-300">
-              <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
               <span>
-                Studied: <strong className="text-white">{srsStats?.totalStudied || 0}</strong> <span className="hidden sm:inline">chars</span>
+                Saved: <strong className="text-amber-400">{totalBookmarks}</strong> <span className="hidden sm:inline">words</span>
               </span>
             </div>
           </div>

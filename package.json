@@ -11,14 +11,12 @@
     "build:data": "node scripts/build-dictionary.mjs && node scripts/check-stroke-coverage.mjs"
   },
   "dependencies": {
-    "dexie": "^3.2.4",
     "hanzi-writer": "^3.5.0",
     "lucide-react": "^0.344.0",
     "motion": "^12.42.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.18.1",
-    "ts-fsrs": "^3.5.0"
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
