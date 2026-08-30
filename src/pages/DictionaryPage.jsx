@@ -2,7 +2,7 @@ import React from 'react';
 import { SearchBar } from '../components/SearchBar';
 import { VocabularyGrid } from '../components/VocabularyGrid';
 import { useSearch } from '../hooks/useSearch';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function DictionaryPage() {
@@ -22,17 +22,19 @@ export function DictionaryPage() {
   return (
     <div className="space-y-8">
       {/* Banner Header */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-800 shadow-2xl">
-        <div className="absolute -top-12 -right-12 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-xl">
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-rose-500/10 dark:bg-rose-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+        
         <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 text-rose-300 text-xs font-semibold border border-rose-500/20 mb-3">
-            <Sparkles className="w-3.5 h-3.5" /> HSK 1-6 Master Dictionary & Stroke Order Engine
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-300 text-xs font-bold border border-rose-500/20 mb-3 shadow-sm">
+            <Sparkles className="w-3.5 h-3.5 fill-current" /> HSK 1-6 Master Dictionary & Stroke Order Engine
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-2 font-chinese">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2 font-chinese">
             Master Chinese Character Stroke Orders
           </h1>
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
-            Click any character to view full details & animation, or hit Practice to jump straight into stroke writing.
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+            Click any character to view animated stroke order, or practice writing directly with real-time stroke feedback.
           </p>
         </div>
       </div>
