@@ -24,12 +24,12 @@ export function SearchBar({ query, setQuery, selectedLevel, setSelectedLevel, to
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by Chinese character (爸), Pinyin (baba / bàba), or English (dad)..."
-          className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all text-sm sm:text-base shadow-inner"
+          className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 transition-all text-sm sm:text-base shadow-sm"
         />
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white"
+            className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-700 dark:hover:text-white"
           >
             <X className="w-4 h-4" />
           </button>
@@ -39,17 +39,17 @@ export function SearchBar({ query, setQuery, selectedLevel, setSelectedLevel, to
       {/* HSK Level Filter Pills */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 scrollbar-none">
         <div className="flex items-center gap-1.5 min-w-max">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1 mr-1">
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1 mr-1">
             <Filter className="w-3.5 h-3.5" /> Filter:
           </span>
           {levels.map((lvl) => (
             <button
               key={lvl.id}
               onClick={() => setSelectedLevel(lvl.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 selectedLevel === lvl.id
-                  ? 'bg-rose-500 text-white shadow-md shadow-rose-950/40'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800'
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 scale-105'
+                  : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 shadow-sm'
               }`}
             >
               {lvl.label}
@@ -57,10 +57,12 @@ export function SearchBar({ query, setQuery, selectedLevel, setSelectedLevel, to
           ))}
         </div>
 
-        <div className="text-xs text-slate-400 font-medium whitespace-nowrap pl-2">
-          Found <span className="text-rose-400 font-bold">{totalResults}</span> entries
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap pl-2">
+          Found <span className="text-rose-600 dark:text-rose-400 font-black">{totalResults}</span> entries
         </div>
       </div>
     </div>
   );
 }
+
+export default SearchBar;
