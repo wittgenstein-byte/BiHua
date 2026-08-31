@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { PageSkeletonFallback } from './components/PageSkeletonFallback';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
 import { prefetchDictionary } from './hooks/useDictionary';
 
@@ -73,11 +74,13 @@ function AppContent() {
 
 export function App() {
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

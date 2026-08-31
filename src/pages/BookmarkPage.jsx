@@ -360,9 +360,14 @@ export function BookmarkPage() {
                 <button
                   onClick={() => handleLaunchChallenge(currentFolder)}
                   disabled={currentFolderWords.length === 0}
-                  className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={currentFolderWords.length === 0 ? "กรุณาบันทึกคำศัพท์อย่างน้อย 1 คำเพื่อเริ่มโหมดนี้" : "Start WordSnap Challenge"}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-xs transition-all ${
+                    currentFolderWords.length === 0
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed shadow-none opacity-60'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95'
+                  }`}
                 >
-                  <Zap className="w-4 h-4 fill-white" />
+                  <Zap className={`w-4 h-4 ${currentFolderWords.length > 0 ? 'fill-white' : 'text-slate-400'}`} />
                   <span>Start Challenge ({currentFolderWords.length})</span>
                 </button>
 

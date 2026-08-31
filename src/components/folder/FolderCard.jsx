@@ -135,18 +135,21 @@ export function FolderCard({
 
         {/* Top Right Quick WordSnap Play Trigger */}
         <div className="absolute top-0 right-0 flex items-center gap-1">
-          {wordsCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlay?.();
-              }}
-              className="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200/70 dark:border-rose-500/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
-              title="Start WordSnap Challenge"
-            >
-              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-            </button>
-          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (wordsCount > 0) onPlay?.();
+            }}
+            disabled={wordsCount === 0}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${
+              wordsCount > 0
+                ? 'bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200/70 dark:border-rose-500/20 hover:scale-110 active:scale-95 shadow-sm'
+                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-300 dark:text-slate-600 border-slate-200/50 dark:border-slate-800 cursor-not-allowed opacity-50'
+            }`}
+            title={wordsCount > 0 ? "Start WordSnap Challenge" : "กรุณาบันทึกคำศัพท์อย่างน้อย 1 คำเพื่อเริ่มโหมดนี้"}
+          >
+            <Play className={`w-3.5 h-3.5 ml-0.5 ${wordsCount > 0 ? 'fill-current' : 'fill-slate-300 dark:fill-slate-600'}`} />
+          </button>
 
           {!isMaster && (
             <div className="relative" ref={menuRef}>

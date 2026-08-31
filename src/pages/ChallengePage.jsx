@@ -15,14 +15,39 @@ import {
   ArrowLeft,
   Sparkles,
   PenTool,
+  Bookmark,
+  BookOpen,
   Folder,
-  Plus
+  Plus,
+  Info
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useDictionary } from '../hooks/useDictionary';
 import { useDecks } from '../hooks/useDecks';
 import confetti from 'canvas-confetti';
+
+/**
+ * Fisher-Yates Shuffle Algorithm (Unbiased)
+ */
+const shuffleArray = (array) => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
+/**
+ * Retry Spacing Strategy:
+ * When a card is answered incorrectly, don't put it at the very end of a 100-card queue,
+ * and don't show it immediately. Spaced retry after 2-4 cards for optimal recall.
+ */
+const getRetryPosition = (queueLength) => {
+  if (queueLength <= 2) return queueLength;
+  return Math.min(queueLength, 2 + Math.floor(Math.random() * 3));
+};
 
 /**
  * DraggableCard
@@ -205,7 +230,7 @@ export function ChallengePage() {
   const { words } = useDictionary();
   const { decks } = useDecks();
 
-  // Resolve target folder and words
+  // Resolve target folder
   const isMaster = !folderId || folderId === 'all';
 
   const folder = useMemo(() => {
@@ -220,61 +245,46 @@ export function ChallengePage() {
     return decks.find(d => d.id === folderId) || null;
   }, [folderId, isMaster, decks]);
 
-  // Resolve target words with intelligent fallback
+  // Resolve user's genuine saved words in this challenge session
   const targetWords = useMemo(() => {
     if (!words || words.length === 0) return [];
 
     if (isMaster) {
-      // 1. Gather all bookmark words
       const bookmarkSet = new Set(bookmarks || []);
-      
-      // 2. Also gather words from all custom decks
-      (decks || []).forEach(d => {
-        (d.words || []).forEach(w => bookmarkSet.add(w));
-      });
-
-      const matched = words.filter(w => bookmarkSet.has(w.word));
-
-      // 3. Fallback to top HSK 1 core starter words if user has 0 saved words
-      if (matched.length === 0) {
-        return words.filter(w => w.level === 1).slice(0, 10);
-      }
-      return matched;
+      return words.filter(w => bookmarkSet.has(w.word));
     }
 
     if (!folder || !folder.words || folder.words.length === 0) return [];
     const folderWordSet = new Set(folder.words);
     return words.filter(w => folderWordSet.has(w.word));
-  }, [isMaster, bookmarks, decks, words, folder]);
+  }, [isMaster, bookmarks, words, folder]);
 
-  // Game States
-  const [deck, setDeck] = useState(() => {
-    return targetWords.length > 0 ? [...targetWords].sort(() => Math.random() - 0.5) : [];
-  });
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // ── Queue-based Flashcard Engine ──
+  const [queue, setQueue] = useState(() => shuffleArray(targetWords));
+  const [masteredMap, setMasteredMap] = useState(() => new Map());
+  const [isGameOver, setIsGameOver] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [exitDirection, setExitDirection] = useState(1);
-  const [isGameOver, setIsGameOver] = useState(false);
+  const [actionCounter, setActionCounter] = useState(0);
 
   // Stats & Gamification
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [score, setScore] = useState(0);
-  const [masteredWords, setMasteredWords] = useState([]);
-  const [missedWords, setMissedWords] = useState([]);
 
   // Timer Options (Zen vs 60s Blitz)
   const [timerMode, setTimerMode] = useState('zen'); // 'zen' | 'timed'
   const [timeLeft, setTimeLeft] = useState(60);
   const timerRef = useRef(null);
 
-  // Re-sync deck if targetWords change and deck is empty
+  // Initialize queue once targetWords is loaded
+  const initializedRef = useRef(false);
   useEffect(() => {
-    if (targetWords.length > 0 && deck.length === 0) {
-      const shuffled = [...targetWords].sort(() => Math.random() - 0.5);
-      setDeck(shuffled);
+    if (targetWords.length > 0 && !initializedRef.current) {
+      setQueue(shuffleArray(targetWords));
+      initializedRef.current = true;
     }
-  }, [targetWords, deck.length]);
+  }, [targetWords]);
 
   // Handle Blitz Timer
   useEffect(() => {
@@ -309,8 +319,9 @@ export function ChallengePage() {
     window.speechSynthesis.speak(utterance);
   };
 
-  const currentWord = deck[currentIndex];
-  const nextWord = deck[currentIndex + 1];
+  // Current and next card directly from Queue
+  const currentWord = queue[0];
+  const nextWord = queue[1];
 
   // Handle keyboard shortcuts (ArrowLeft = Practice, ArrowRight = Got it, Space = Flip, V/S = Speak)
   useEffect(() => {
@@ -333,52 +344,115 @@ export function ChallengePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentWord, isGameOver, streak, maxStreak, currentIndex, deck]);
+  }, [currentWord, isGameOver]);
 
-  // Handle Next Card logic
-  const handleAnswer = (isCorrect) => {
-    if (!currentWord) return;
+  // ── True Queue-based handleAnswer ──
+  const handleAnswer = useCallback((isCorrect) => {
+    if (!currentWord || isGameOver) return;
 
-    const dir = isCorrect ? 1 : -1;
-    setExitDirection(dir);
+    setExitDirection(isCorrect ? 1 : -1);
+    setIsFlipped(false);
+    setActionCounter(c => c + 1);
 
     if (isCorrect) {
+      // ── CORRECT: GOT IT! ──
       const newStreak = streak + 1;
       setStreak(newStreak);
-      if (newStreak > maxStreak) setMaxStreak(newStreak);
+      setMaxStreak(prev => Math.max(prev, newStreak));
 
       const multiplier = newStreak >= 5 ? 3 : newStreak >= 3 ? 2 : 1;
-      setScore(prev => prev + (100 * multiplier));
-      setMasteredWords(prev => [...prev, currentWord]);
+      setScore(prev => prev + 100 * multiplier);
+
+      // Add to mastered map
+      setMasteredMap(prev => {
+        const next = new Map(prev);
+        next.set(currentWord.word, currentWord);
+        return next;
+      });
+
+      // Remove current card from queue (Dequeue)
+      setQueue(prev => {
+        const [, ...rest] = prev;
+        if (rest.length === 0) {
+          setTimeout(() => {
+            setIsGameOver(true);
+          }, 220);
+        }
+        return rest;
+      });
     } else {
+      // ── WRONG: NEED PRACTICE ──
       setStreak(0);
-      setMissedWords(prev => [...prev, currentWord]);
+
+      // Reinsert into queue a few cards later (Spaced Retry Loop)
+      setQueue(prev => {
+        const [, ...rest] = prev;
+        if (rest.length === 0) {
+          return [currentWord];
+        }
+        const insertAfter = getRetryPosition(rest.length);
+        return [
+          ...rest.slice(0, insertAfter),
+          currentWord,
+          ...rest.slice(insertAfter)
+        ];
+      });
     }
+  }, [currentWord, isGameOver, streak]);
 
-    setIsFlipped(false);
+  // Direct Confetti Celebration Burst (Fires ONLY when 100% Got It achieved)
+  const fireCelebration = useCallback(() => {
+    try {
+      confetti({
+        particleCount: 55,
+        angle: 60,
+        spread: 65,
+        origin: { x: 0.15, y: 0.7 },
+        colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
+      });
+      confetti({
+        particleCount: 55,
+        angle: 120,
+        spread: 65,
+        origin: { x: 0.85, y: 0.7 },
+        colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
+      });
+    } catch (e) {
+      console.error('Confetti error:', e);
+    }
+  }, []);
 
-    if (currentIndex + 1 < deck.length) {
-      setCurrentIndex(prev => prev + 1);
-    } else {
-      setIsGameOver(true);
+  // 100% Mastery check: every word in targetWords has been Got It and queue is empty
+  const isAllGotIt = isGameOver && queue.length === 0 && masteredMap.size >= targetWords.length && targetWords.length > 0;
+
+  // Automatically trigger confetti ONLY when 100% of all target words are Got It
+  useEffect(() => {
+    if (isAllGotIt) {
+      const timer = setTimeout(() => {
+        fireCelebration();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isAllGotIt, fireCelebration]);
+
+  // Handle manual confetti trigger on clicking trophy
+  const handleManualConfettiTrigger = () => {
+    if (isAllGotIt) {
+      fireCelebration();
     }
   };
 
-  // Restart Sprint
-  const handleRestart = (onlyMissed = false) => {
-    const nextDeck = onlyMissed && missedWords.length > 0 
-      ? [...missedWords].sort(() => Math.random() - 0.5) 
-      : [...targetWords].sort(() => Math.random() - 0.5);
-
-    setDeck(nextDeck);
-    setCurrentIndex(0);
+  // ── Restart Game (Full Clean Shuffle) ──
+  const handleRestartFull = () => {
+    setMasteredMap(new Map());
+    setQueue(shuffleArray(targetWords));
     setIsFlipped(false);
-    setIsGameOver(false);
     setExitDirection(1);
+    setIsGameOver(false);
+    setActionCounter(0);
     setStreak(0);
+    setMaxStreak(0);
     setScore(0);
-    setMasteredWords([]);
-    setMissedWords([]);
     setTimeLeft(60);
   };
 
@@ -391,92 +465,83 @@ export function ChallengePage() {
     }
   };
 
-  const isAllGotIt = isGameOver && deck.length > 0 && missedWords.length === 0 && masteredWords.length === deck.length;
-  const progressPercent = deck.length > 0 ? Math.round(((currentIndex + (isGameOver ? 1 : 0)) / deck.length) * 100) : 0;
+  const totalWordsCount = targetWords.length;
+  const masteredWordsList = useMemo(() => Array.from(masteredMap.values()), [masteredMap]);
+  const overallMasteryPercent = totalWordsCount > 0 ? Math.round((masteredWordsList.length / totalWordsCount) * 100) : 0;
 
-  // Direct Confetti Celebration Burst
-  const fireCelebration = useCallback((isPerfect = false) => {
-    try {
-      if (isPerfect) {
-        // Dual cannon celebration
-        confetti({
-          particleCount: 50,
-          angle: 60,
-          spread: 65,
-          origin: { x: 0.15, y: 0.7 },
-          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
-        });
-        confetti({
-          particleCount: 50,
-          angle: 120,
-          spread: 65,
-          origin: { x: 0.85, y: 0.7 },
-          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
-        });
-      } else {
-        // Center celebration
-        confetti({
-          particleCount: 65,
-          spread: 75,
-          origin: { y: 0.6 },
-          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4']
-        });
-      }
-    } catch (e) {
-      console.error('Confetti error:', e);
-    }
-  }, []);
-
-  // Automatically trigger confetti when game finishes
-  useEffect(() => {
-    if (isGameOver && deck.length > 0) {
-      const isPerfect = missedWords.length === 0 && masteredWords.length === deck.length;
-      // Slight delay so results modal has rendered
-      const timer = setTimeout(() => {
-        fireCelebration(isPerfect);
-      }, 250);
-      return () => clearTimeout(timer);
-    }
-  }, [isGameOver, deck.length, missedWords.length, masteredWords.length, fireCelebration]);
-
-  // Handle manual confetti trigger on clicking trophy
-  const handleManualConfettiTrigger = () => {
-    const isPerfect = missedWords.length === 0 && masteredWords.length === deck.length;
-    fireCelebration(isPerfect);
-  };
-
-  // Not Found / Empty Folder State (Only for custom folders that don't exist or have 0 words)
+  // ──── DEDICATED EMPTY STATE VIEW ────
   if (!folder || targetWords.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none text-slate-800 dark:text-slate-100">
-        <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mx-auto mb-6 shadow-xl shadow-rose-950/20">
-          <Folder className="w-10 h-10" />
+      <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none text-slate-800 dark:text-slate-100 relative overflow-hidden transition-colors">
+        
+        {/* Background ambient glowing gradient decoration */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-rose-500/10 dark:bg-rose-500/15 blur-3xl" />
+          <div className="absolute top-1/2 -right-32 w-96 h-96 rounded-full bg-amber-500/10 dark:bg-amber-500/15 blur-3xl" />
+          <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 blur-3xl" />
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-black font-chinese mb-2 text-slate-900 dark:text-white">
-          {!folder ? 'Folder Not Found' : 'No Words in this Folder'}
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8 font-medium leading-relaxed">
-          {!folder 
-            ? 'The requested folder could not be found or may have been deleted.' 
-            : 'Add some words to this folder first before launching the WordSnap Challenge.'}
-        </p>
+        {/* Top Guard Toast Notification */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-6 z-20 max-w-md mx-auto px-4 py-2.5 rounded-2xl bg-amber-500/15 dark:bg-amber-500/20 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2 shadow-lg backdrop-blur-md"
+        >
+          <Info className="w-4 h-4 shrink-0 text-amber-500" />
+          <span>คุณยังไม่มีคำศัพท์ที่บันทึกไว้ในส่วนนี้ กรุณาบันทึกคำศัพท์ก่อนเริ่มเล่น</span>
+        </motion.div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/bookmark')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold transition-all shadow-md active:scale-95 border border-slate-200 dark:border-slate-700"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Folders
-          </button>
-          
-          <button
-            onClick={() => navigate(folder ? `/bookmark/${folder.id}` : '/dictionary')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> Manage Words
-          </button>
-        </div>
+        {/* Central Dedicated Empty State Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="relative z-10 max-w-lg w-full glass-panel rounded-3xl p-8 sm:p-10 text-center space-y-6 border border-slate-200/80 dark:border-slate-800 shadow-2xl backdrop-blur-xl"
+        >
+          {/* Animated Bookmark Icon Badge */}
+          <div className="w-20 h-20 rounded-3xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto shadow-xl shadow-rose-950/20">
+            {isMaster ? <Bookmark className="w-10 h-10 fill-rose-500/20" /> : <Folder className="w-10 h-10 fill-rose-500/20" />}
+          </div>
+
+          {/* Heading and Clarifying Solution */}
+          <div className="space-y-2.5">
+            <h1 className="text-2xl sm:text-3xl font-black font-chinese text-slate-900 dark:text-white">
+              {!folder
+                ? 'ไม่พบโฟลเดอร์คำศัพท์'
+                : isMaster
+                ? 'ยังไม่มีคำศัพท์ที่บันทึกไว้'
+                : `${folder.name} ยังไม่มีคำศัพท์`}
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-md mx-auto">
+              กดไอคอน <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/20">🔖 Bookmark</span> ในหน้าพจนานุกรมเพื่อเพิ่มคำศัพท์เข้ามาฝึกทำ Challenge ในโหมดนี้
+            </p>
+          </div>
+
+          {/* Call-to-Action Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => navigate('/dictionary')}
+              className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-105 active:scale-95"
+            >
+              <BookOpen className="w-4 h-4" /> ไปเลือกคำศัพท์ในพจนานุกรม
+            </button>
+
+            {folder && !folder.isMaster ? (
+              <button
+                onClick={() => navigate(`/bookmark/${folder.id}`)}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-sm"
+              >
+                <Plus className="w-4 h-4 text-rose-500" /> จัดการคำศัพท์ในโฟลเดอร์นี้
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/bookmark')}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-sm"
+              >
+                <Folder className="w-4 h-4 text-slate-500" /> กลับหน้ารายการโฟลเดอร์
+              </button>
+            )}
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -547,14 +612,22 @@ export function ChallengePage() {
         </div>
       </header>
 
-      {/* ──── PROGRESS & SCORE BAR ──── */}
+      {/* ──── PROGRESS & QUEUE STATUS BAR ──── */}
       {!isGameOver && (
         <div className="px-4 sm:px-8 pt-3 pb-2 bg-white/50 dark:bg-slate-900/40 border-b border-slate-200/60 dark:border-slate-800/50 z-20 shrink-0">
           <div className="max-w-xl mx-auto space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-500 dark:text-slate-400">
-                Card <strong className="text-slate-900 dark:text-white font-extrabold">{Math.min(currentIndex + 1, deck.length)}</strong> of <strong className="text-slate-900 dark:text-white font-extrabold">{deck.length}</strong>
-              </span>
+              
+              {/* Mastered and Queue remaining counts */}
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Mastered <strong className="text-slate-900 dark:text-white font-extrabold">{masteredMap.size}</strong> of <strong className="text-slate-900 dark:text-white font-extrabold">{totalWordsCount}</strong>
+                </span>
+
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-extrabold">
+                  {queue.length} in Queue
+                </span>
+              </div>
 
               {/* Fire Streak & Score */}
               <div className="flex items-center gap-2">
@@ -574,12 +647,12 @@ export function ChallengePage() {
               </div>
             </div>
 
-            {/* Linear Progress Bar */}
+            {/* Overall Mastery Progress Bar */}
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shadow-inner">
               <motion.div
-                className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 rounded-full"
+                className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-500 rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
+                animate={{ width: `${overallMasteryPercent}%` }}
                 transition={{ duration: 0.3 }}
               />
             </div>
@@ -592,14 +665,14 @@ export function ChallengePage() {
         {!isGameOver && currentWord ? (
           <div className="w-full max-w-sm flex flex-col items-center gap-6 my-auto">
             
-            {/* WordSnap Card Stack Arena with PopLayout */}
+            {/* WordSnap Card Arena with PopLayout */}
             <div className="relative w-full max-w-[340px] aspect-[4/5] flex items-center justify-center">
               <BackgroundCardPreview nextWord={nextWord} />
 
               <AnimatePresence mode="popLayout">
                 <DraggableCard
-                  key={`${currentWord.id || currentWord.word}-${currentIndex}`}
-                  cardKey={`${currentWord.id || currentWord.word}-${currentIndex}`}
+                  key={`${currentWord.id || currentWord.word}-${actionCounter}`}
+                  cardKey={`${currentWord.id || currentWord.word}-${actionCounter}`}
                   word={currentWord}
                   exitDirection={exitDirection}
                   isFlipped={isFlipped}
@@ -643,7 +716,7 @@ export function ChallengePage() {
             </p>
           </div>
         ) : (
-          /* ──── GAME OVER & RESULTS SCREEN ──── */
+          /* ──── 100% MASTERY CELEBRATION & RESULTS SCREEN ──── */
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -653,34 +726,18 @@ export function ChallengePage() {
             <div className="space-y-3">
               <div
                 onClick={handleManualConfettiTrigger}
-                className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl transition-all ${
-                  isAllGotIt
-                    ? 'bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce'
-                    : masteredWords.length >= deck.length / 2
-                    ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer hover:scale-105'
-                    : 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer hover:scale-105'
-                }`}
-                title="Click for celebratory confetti!"
+                className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl transition-all bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce"
+                title="คลิกเพื่อจุดพลุฉลอง Confetti อีกครั้ง!"
               >
-                {isAllGotIt ? (
-                  <Trophy className="w-10 h-10 fill-current" />
-                ) : masteredWords.length >= deck.length / 2 ? (
-                  <Sparkles className="w-10 h-10" />
-                ) : (
-                  <Flame className="w-10 h-10" />
-                )}
+                <Trophy className="w-10 h-10 fill-current" />
               </div>
 
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-chinese">
-                  {isAllGotIt
-                    ? 'Perfect Mastery! 🏆'
-                    : masteredWords.length >= deck.length / 2
-                    ? 'Great Workout! ⚡'
-                    : 'Keep Practicing! 💪'}
+                  Perfect Mastery! 🏆
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
-                  You completed all {deck.length} flashcards in <strong className="text-slate-900 dark:text-white">{folder.name}</strong>
+                  ยินดีด้วย! คุณผ่านการทดสอบ Got It ครบทั้งหมด {totalWordsCount} คำใน <strong className="text-slate-900 dark:text-white">{folder.name}</strong> เรียบร้อย 100%
                 </p>
               </div>
             </div>
@@ -698,80 +755,49 @@ export function ChallengePage() {
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accuracy</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mastered</div>
                 <div className="text-xl font-black text-emerald-500 dark:text-emerald-400 mt-0.5">
-                  {deck.length > 0 ? Math.round((masteredWords.length / deck.length) * 100) : 0}%
+                  100%
                 </div>
               </div>
             </div>
 
-            {/* Review Cards breakdown */}
+            {/* Mastered (Got It) Words List */}
             <div className="space-y-2 text-left max-h-48 overflow-y-auto pr-1">
-              {missedWords.length > 0 && (
-                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 space-y-2">
-                  <div className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
-                    <XCircle className="w-3.5 h-3.5" /> Words to Practice ({missedWords.length})
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {missedWords.map((w, idx) => (
-                      <span
-                        key={idx}
-                        onClick={() => navigate(`/character/${encodeURIComponent(w.word)}?mode=practice`)}
-                        className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/90 text-rose-600 dark:text-rose-300 text-xs font-extrabold border border-rose-200 dark:border-rose-500/20 flex items-center gap-1 cursor-pointer hover:bg-rose-500 hover:text-white transition-colors"
-                        title="Practice writing"
-                      >
-                        {w.word} <PenTool className="w-3 h-3" />
-                      </span>
-                    ))}
-                  </div>
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 space-y-2">
+                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> คำศัพท์ที่ผ่านการทดสอบครบทั้งหมด ({masteredWordsList.length}/{totalWordsCount})
                 </div>
-              )}
-
-              {masteredWords.length > 0 && (
-                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 space-y-2">
-                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Mastered Words ({masteredWords.length})
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {masteredWords.map((w, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20"
-                      >
-                        {w.word}
-                      </span>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {masteredWordsList.map((w, idx) => (
+                    <span
+                      key={idx}
+                      onClick={() => navigate(`/character/${encodeURIComponent(w.word)}?mode=practice`)}
+                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-1 cursor-pointer hover:bg-emerald-500 hover:text-white transition-colors"
+                      title="Practice writing strokes"
+                    >
+                      {w.word} <PenTool className="w-3 h-3 opacity-60" />
+                    </span>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Action Buttons */}
             <div className="space-y-2 pt-2">
-              {missedWords.length > 0 && (
-                <button
-                  onClick={() => handleRestart(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-[1.02] active:scale-95"
-                >
-                  <RotateCcw className="w-4 h-4" /> Practice Missed Words Only ({missedWords.length})
-                </button>
-              )}
+              <button
+                onClick={handleRestartFull}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-[1.02] active:scale-95"
+              >
+                <RotateCcw className="w-4 h-4" /> เล่นใหม่อีกครั้ง (New Round)
+              </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleRestart(false)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
-                >
-                  <RotateCcw className="w-4 h-4" /> Replay All
-                </button>
-
-                <button
-                  onClick={handleExit}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Back to Folder
-                </button>
-              </div>
+              <button
+                onClick={handleExit}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
+              >
+                <ArrowLeft className="w-4 h-4" /> กลับหน้ารายการโฟลเดอร์
+              </button>
             </div>
           </motion.div>
         )}

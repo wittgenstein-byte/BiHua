@@ -2,34 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 
 const DECK_STORAGE_KEY = 'bihua_decks';
 
-const DEFAULT_DECKS = [
-  {
-    id: 'deck_hsk1',
-    name: 'HSK 1 Basics',
-    description: 'Foundational vocabulary for daily conversation',
-    color: '#e11d48',
-    words: ['你好', '谢谢', '学习', '苹果']
-  },
-  {
-    id: 'deck_daily',
-    name: 'Daily Phrases',
-    description: 'Useful everyday phrases and expressions',
-    color: '#0284c7',
-    words: ['快乐', '白天', '吃饭', '帮忙']
-  }
-];
-
 function getSavedDecks() {
   try {
     const saved = localStorage.getItem(DECK_STORAGE_KEY);
     if (!saved) {
-      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(DEFAULT_DECKS));
-      return DEFAULT_DECKS;
+      return [];
     }
-    return JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    
+    // Automatically filter out legacy default mock decks if they were stored previously
+    const cleaned = parsed.filter(d => d && d.id !== 'deck_hsk1' && d.id !== 'deck_daily');
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (err) {
     console.error('Error reading decks from localStorage:', err);
-    return DEFAULT_DECKS;
+    return [];
   }
 }
 
