@@ -11,7 +11,6 @@ import {
   Flame,
   Volume2,
   PenTool,
-  X,
   Search,
   Sparkles,
   Layers,
@@ -455,20 +454,6 @@ export function BookmarkPage() {
                       >
                         <Volume2 className="w-3.5 h-3.5" />
                       </button>
-
-                      {/* Remove from custom folder */}
-                      {!currentFolder.isMaster && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeWordFromDeck(currentFolder.id, w.word);
-                          }}
-                          className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-colors shadow-sm"
-                          title="Remove from this folder"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
                   </div>
 
