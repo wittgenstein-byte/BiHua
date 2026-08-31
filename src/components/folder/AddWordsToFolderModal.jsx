@@ -40,6 +40,9 @@ export function AddWordsToFolderModal({
     });
   }, [allBookmarkedWords, selectedLevel, searchQuery]);
 
+  // Optimized Set for constant time O(1) membership lookups
+  const selectedWordsSet = useMemo(() => new Set(selectedWords), [selectedWords]);
+
   if (!isOpen || !folder) return null;
 
   const toggleWord = (wordText) => {
@@ -54,13 +57,12 @@ export function AddWordsToFolderModal({
 
   const handleSelectAllFiltered = () => {
     const filteredWordTexts = filteredWords.map(w => w.word);
-    const allSelected = filteredWordTexts.every(w => selectedWords.includes(w));
+    const allSelected = filteredWordTexts.every(w => selectedWordsSet.has(w));
 
     if (allSelected) {
-      // Unselect filtered
-      setSelectedWords(prev => prev.filter(w => !filteredWordTexts.includes(w)));
+      const filteredSet = new Set(filteredWordTexts);
+      setSelectedWords(prev => prev.filter(w => !filteredSet.has(w)));
     } else {
-      // Select all filtered
       setSelectedWords(prev => Array.from(new Set([...prev, ...filteredWordTexts])));
     }
   };
@@ -70,7 +72,7 @@ export function AddWordsToFolderModal({
     onClose();
   };
 
-  const isAllFilteredSelected = filteredWords.length > 0 && filteredWords.every(w => selectedWords.includes(w.word));
+  const isAllFilteredSelected = filteredWords.length > 0 && filteredWords.every(w => selectedWordsSet.has(w.word));
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 dark:bg-slate-950/90 backdrop-blur-md animate-fade-in select-none">
@@ -97,57 +99,56 @@ export function AddWordsToFolderModal({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+            aria-label="Close modal"
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-rose-500"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Search & Level Filters */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800/80 space-y-3">
-          {/* Search Input */}
+        {/* Search & Filter Bar */}
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3 bg-white dark:bg-slate-900">
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search words by Hanzi, Pinyin, or English..."
-              className="w-full pl-9 pr-4 py-2 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-xs font-semibold focus:outline-none focus:border-rose-500 transition-all placeholder:text-slate-400"
+              placeholder="Search by Hanzi, Pinyin or English..."
+              aria-label="Search words"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 border-none text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-rose-500 transition-colors"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
-          {/* Level Filter Chips + Select All */}
+          {/* Level Pills & Select All */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => setSelectedLevel(0)}
-                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
-                  selectedLevel === 0
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                All
-              </button>
-              {[1, 2, 3, 4, 5, 6].map(lvl => (
+              {[0, 1, 2, 3, 4, 5, 6].map((lvl) => (
                 <button
                   key={lvl}
                   onClick={() => setSelectedLevel(lvl)}
-                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
                     selectedLevel === lvl
                       ? 'bg-rose-600 text-white shadow-sm'
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
-                  HSK {lvl}
+                  {lvl === 0 ? 'All' : `HSK ${lvl}`}
                 </button>
               ))}
             </div>
 
             <button
               onClick={handleSelectAllFiltered}
-              className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline shrink-0 flex items-center gap-1"
+              className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline shrink-0 flex items-center gap-1 focus:outline-none"
             >
               {isAllFilteredSelected ? (
                 <>
@@ -167,12 +168,20 @@ export function AddWordsToFolderModal({
           {filteredWords.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {filteredWords.map((w) => {
-                const isSelected = selectedWords.includes(w.word);
+                const isSelected = selectedWordsSet.has(w.word);
                 return (
                   <div
                     key={w.word}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleWord(w.word)}
-                    className={`p-3 rounded-2xl border flex items-center justify-between gap-2.5 cursor-pointer transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleWord(w.word);
+                      }
+                    }}
+                    className={`p-3 rounded-2xl border flex items-center justify-between gap-2.5 cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-rose-500 ${
                       isSelected
                         ? 'bg-rose-50/80 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/30 shadow-sm'
                         : 'bg-white dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700/60 hover:border-slate-300 dark:hover:border-slate-600'

@@ -31,18 +31,13 @@ export function FolderCard({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isTouchDevice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  });
   const menuRef = useRef(null);
 
   const folderColor = folder.color || '#e11d48';
-
-  // Detect touch device capability
-  useEffect(() => {
-    const checkTouch = () => {
-      setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    };
-    checkTouch();
-  }, []);
 
   // Close 3-dots menu on outside click
   useEffect(() => {
@@ -57,11 +52,10 @@ export function FolderCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
-  // Click & Tap Navigation Logic:
-  // Desktop: Hover opens preview, 1st click navigates into Folder Explorer.
-  // Mobile / Touch: 1st tap opens preview papers, 2nd tap navigates into Folder Explorer.
+  // Touch Handling: First tap opens preview, Second tap opens folder page
   const handleCardInteraction = (e) => {
-    if (menuRef.current && menuRef.current.contains(e.target)) {
+    // If click originated from action buttons or 3-dots menu, let those handlers process
+    if (e.target.closest('button') || e.target.closest('.no-card-nav')) {
       return;
     }
 
@@ -80,11 +74,12 @@ export function FolderCard({
   const paperItems = previewWords
     .filter(Boolean)
     .slice(0, 3)
-    .map((w, idx) => {
+    .map((w) => {
+      const wordText = typeof w === 'object' ? w.word : w;
       return (
-        <div key={idx} className="w-full h-full flex flex-col items-center justify-center p-1 select-none pointer-events-none">
+        <div key={wordText || w.id} className="w-full h-full flex flex-col items-center justify-center p-1 select-none pointer-events-none">
           <span className="font-chinese font-bold text-xs sm:text-sm text-slate-800 leading-tight mb-0.5">
-            {w.word || w}
+            {wordText}
           </span>
           {w.pinyin && (
             <span className="text-[9px] font-semibold text-rose-500 leading-tight">

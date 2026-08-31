@@ -294,14 +294,7 @@ export function ChallengePage() {
     }
 
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          setIsGameOver(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft(prev => Math.max(0, prev - 1));
     }, 1000);
 
     return () => {
@@ -309,42 +302,27 @@ export function ChallengePage() {
     };
   }, [isGameOver, timerMode]);
 
+  // Watch for timer expiration cleanly
+  useEffect(() => {
+    if (timerMode === 'timed' && timeLeft === 0 && !isGameOver) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setIsGameOver(true);
+    }
+  }, [timeLeft, timerMode, isGameOver]);
+
   // Audio Speech Synthesis
-  const speakWord = (text) => {
+  const speakWord = useCallback((text) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'zh-CN';
     utterance.rate = 0.85;
     window.speechSynthesis.speak(utterance);
-  };
+  }, []);
 
   // Current and next card directly from Queue
   const currentWord = queue[0];
   const nextWord = queue[1];
-
-  // Handle keyboard shortcuts (ArrowLeft = Practice, ArrowRight = Got it, Space = Flip, V/S = Speak)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (isGameOver || !currentWord) return;
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleAnswer(true);
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        handleAnswer(false);
-      } else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        e.preventDefault();
-        setIsFlipped(prev => !prev);
-      } else if (e.key === 'v' || e.key === 'V' || e.key === 's' || e.key === 'S') {
-        e.preventDefault();
-        speakWord(currentWord.word);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentWord, isGameOver]);
 
   // ── True Queue-based handleAnswer ──
   const handleAnswer = useCallback((isCorrect) => {
@@ -371,34 +349,54 @@ export function ChallengePage() {
       });
 
       // Remove current card from queue (Dequeue)
-      setQueue(prev => {
-        const [, ...rest] = prev;
-        if (rest.length === 0) {
-          setTimeout(() => {
-            setIsGameOver(true);
-          }, 220);
-        }
-        return rest;
-      });
+      const nextQueue = queue.slice(1);
+      setQueue(nextQueue);
+      if (nextQueue.length === 0) {
+        setTimeout(() => {
+          setIsGameOver(true);
+        }, 220);
+      }
     } else {
       // ── WRONG: NEED PRACTICE ──
       setStreak(0);
 
       // Reinsert into queue a few cards later (Spaced Retry Loop)
-      setQueue(prev => {
-        const [, ...rest] = prev;
-        if (rest.length === 0) {
-          return [currentWord];
-        }
+      const rest = queue.slice(1);
+      if (rest.length === 0) {
+        setQueue([currentWord]);
+      } else {
         const insertAfter = getRetryPosition(rest.length);
-        return [
+        setQueue([
           ...rest.slice(0, insertAfter),
           currentWord,
           ...rest.slice(insertAfter)
-        ];
-      });
+        ]);
+      }
     }
-  }, [currentWord, isGameOver, streak]);
+  }, [currentWord, isGameOver, streak, queue]);
+
+  // Handle keyboard shortcuts (ArrowLeft = Practice, ArrowRight = Got it, Space = Flip, V/S = Speak)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (isGameOver || !currentWord) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleAnswer(true);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleAnswer(false);
+      } else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setIsFlipped(prev => !prev);
+      } else if (e.key === 'v' || e.key === 'V' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        speakWord(currentWord.word);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentWord, isGameOver, handleAnswer, speakWord]);
 
   // Direct Confetti Celebration Burst (Fires ONLY when 100% Got It achieved)
   const fireCelebration = useCallback(() => {
@@ -650,10 +648,11 @@ export function ChallengePage() {
             {/* Overall Mastery Progress Bar */}
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shadow-inner">
               <motion.div
-                className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-500 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${overallMasteryPercent}%` }}
-                transition={{ duration: 0.3 }}
+                className="h-full w-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-500 rounded-full origin-left"
+                style={{ transformOrigin: 'left' }}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: Math.min(1, Math.max(0, overallMasteryPercent / 100)) }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
               />
             </div>
           </div>
@@ -724,13 +723,14 @@ export function ChallengePage() {
           >
             {/* Header Trophy & Badge */}
             <div className="space-y-3">
-              <div
+              <button
+                type="button"
                 onClick={handleManualConfettiTrigger}
-                className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl transition-all bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce"
+                className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl transition-all bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce focus:outline-none focus:ring-4 focus:ring-amber-400"
                 title="คลิกเพื่อจุดพลุฉลอง Confetti อีกครั้ง!"
               >
                 <Trophy className="w-10 h-10 fill-current" />
-              </div>
+              </button>
 
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-chinese">
@@ -770,14 +770,15 @@ export function ChallengePage() {
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {masteredWordsList.map((w, idx) => (
-                    <span
-                      key={idx}
+                    <button
+                      key={w.word || `${w.id}-${idx}`}
+                      type="button"
                       onClick={() => navigate(`/character/${encodeURIComponent(w.word)}?mode=practice`)}
-                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-1 cursor-pointer hover:bg-emerald-500 hover:text-white transition-colors"
+                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-1 cursor-pointer hover:bg-emerald-500 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-400"
                       title="Practice writing strokes"
                     >
                       {w.word} <PenTool className="w-3 h-3 opacity-60" />
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>

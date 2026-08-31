@@ -3,3 +3,8 @@ dist
 .vercel
 graphify-out
 src/data
+
+
+.agents
+skills-lock.json
+plans

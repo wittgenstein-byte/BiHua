@@ -48,7 +48,8 @@ export function CharacterDetailPage() {
   const relatedWords = getWordsByChar ? getWordsByChar(currentChar).filter(w => w.word !== wordObj.word) : [];
 
   useEffect(() => {
-    if (!containerRef.current || !currentChar) return;
+    const container = containerRef.current;
+    if (!container || !currentChar) return;
 
     let cancelled = false;
     setMistakes(0);
@@ -57,7 +58,7 @@ export function CharacterDetailPage() {
     setIsPlaying(false);
 
     if (mode === 'animate') {
-      const writer = createStrokeWriter(containerRef.current, currentChar, {
+      const writer = createStrokeWriter(container, currentChar, {
         width: 300,
         height: 300,
         showOutline: true,
@@ -70,7 +71,7 @@ export function CharacterDetailPage() {
         animatorRef.current = new StrokeAnimatorController(writer);
       }
     } else if (mode === 'practice') {
-      const writer = createStrokeWriter(containerRef.current, currentChar, {
+      const writer = createStrokeWriter(container, currentChar, {
         width: 300,
         height: 300,
         showOutline: true,
@@ -93,9 +94,9 @@ export function CharacterDetailPage() {
 
     return () => {
       cancelled = true;
-      if (containerRef.current) containerRef.current.innerHTML = '';
+      if (container) container.innerHTML = '';
     };
-  }, [currentChar, mode, selectedCharIndex]);
+  }, [currentChar, mode, selectedCharIndex, speed, highlightRadicals]);
 
   const handleTogglePlay = async () => {
     if (!animatorRef.current) return;
@@ -169,12 +170,12 @@ export function CharacterDetailPage() {
             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1">Characters:</span>
             {chars.map((c, idx) => (
               <button
-                key={idx}
+                key={`${c}-${idx}`}
                 onClick={() => setSelectedCharIndex(idx)}
                 className={`font-chinese text-lg px-4 py-1.5 rounded-2xl font-bold transition-all ${
                   selectedCharIndex === idx
                     ? 'bg-rose-600 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800'
+                    : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:white border border-slate-200 dark:border-slate-800'
                 }`}
               >
                 {c}
@@ -306,9 +307,9 @@ export function CharacterDetailPage() {
               Other HSK Vocabulary Containing "{currentChar}":
             </h4>
             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-1">
-              {relatedWords.map((rw, idx) => (
+              {relatedWords.map((rw) => (
                 <button
-                  key={idx}
+                  key={rw.word || rw.id}
                   onClick={() => navigate(`/character/${encodeURIComponent(rw.word)}`)}
                   className="px-3.5 py-1.5 rounded-2xl bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200/90 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-300 flex items-center gap-1.5 transition-colors shadow-sm"
                 >

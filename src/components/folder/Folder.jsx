@@ -32,7 +32,7 @@ export const Folder = ({
   const papers = items.filter(Boolean).slice(0, maxItems);
   const totalPapers = papers.length;
 
-  const [paperOffsets, setPaperOffsets] = useState(
+  const [paperOffsets, setPaperOffsets] = useState(() =>
     Array.from({ length: maxItems }, () => ({ x: 0, y: 0 }))
   );
 
@@ -46,8 +46,12 @@ export const Folder = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-    const offsetX = (e.clientX - centerX) * 0.18;
-    const offsetY = (e.clientY - centerY) * 0.18;
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+    const maxOffset = 15;
+    const offsetX = Math.max(-maxOffset, Math.min(maxOffset, mouseX * 0.1));
+    const offsetY = Math.max(-maxOffset, Math.min(maxOffset, mouseY * 0.1));
+
     setPaperOffsets(prev => {
       const newOffsets = [...prev];
       newOffsets[index] = { x: offsetX, y: offsetY };
@@ -63,22 +67,19 @@ export const Folder = ({
     });
   };
 
-  const folderStyle = {
-    '--folder-color': color,
-    '--folder-back-color': folderBackColor,
-    '--paper-1': paper1,
-    '--paper-2': paper2,
-    '--paper-3': paper3
-  };
-
-  const folderClassName = `folder ${isOpen ? 'open' : ''} ${totalPapers === 0 ? 'folder--empty' : ''}`.trim();
   const scaleStyle = { transform: `scale(${size})`, transformOrigin: 'center center' };
 
   return (
     <div style={scaleStyle} className={className}>
       <div
-        className={folderClassName}
-        style={folderStyle}
+        className={`folder ${isOpen ? 'open' : ''} ${totalPapers === 0 ? 'folder--empty' : ''}`.trim()}
+        style={{
+          '--folder-color': color,
+          '--folder-back-color': folderBackColor,
+          '--paper-1': paper1,
+          '--paper-2': paper2,
+          '--paper-3': paper3
+        }}
         onClick={onToggle}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -93,24 +94,27 @@ export const Folder = ({
       >
         <div className="folder__back">
           {/* Render ONLY real paper items according to actual count */}
-          {papers.map((item, i) => (
-            <div
-              key={i}
-              className={`paper paper-${i + 1} paper-count-${totalPapers}`}
-              onMouseMove={e => handlePaperMouseMove(e, i)}
-              onMouseLeave={e => handlePaperMouseLeave(e, i)}
-              style={
-                isOpen
-                  ? {
-                      '--magnet-x': `${paperOffsets[i]?.x || 0}px`,
-                      '--magnet-y': `${paperOffsets[i]?.y || 0}px`
-                    }
-                  : {}
-              }
-            >
-              {item}
-            </div>
-          ))}
+          {papers.map((item, i) => {
+            const itemKey = typeof item === 'object' ? item.word || item.id : item;
+            return (
+              <div
+                key={itemKey || `paper-slot-${i}`}
+                className={`paper paper-${i + 1} paper-count-${totalPapers}`}
+                onMouseMove={e => handlePaperMouseMove(e, i)}
+                onMouseLeave={e => handlePaperMouseLeave(e, i)}
+                style={
+                  isOpen
+                    ? {
+                        '--magnet-x': `${paperOffsets[i]?.x || 0}px`,
+                        '--magnet-y': `${paperOffsets[i]?.y || 0}px`
+                      }
+                    : {}
+                }
+              >
+                {item}
+              </div>
+            );
+          })}
           <div className="folder__front"></div>
           <div className="folder__front right"></div>
         </div>
