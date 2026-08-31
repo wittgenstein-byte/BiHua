@@ -77,21 +77,23 @@ export function FolderCard({
   };
 
   // Format up to 3 vocabulary preview cards inside the folder papers
-  const paperItems = previewWords.slice(0, 3).map((w, idx) => {
-    if (!w) return null;
-    return (
-      <div key={idx} className="w-full h-full flex flex-col items-center justify-center p-1 select-none pointer-events-none">
-        <span className="font-chinese font-bold text-xs sm:text-sm text-slate-800 leading-tight mb-0.5">
-          {w.word || w}
-        </span>
-        {w.pinyin && (
-          <span className="text-[9px] font-semibold text-rose-500 leading-tight">
-            {w.pinyin}
+  const paperItems = previewWords
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((w, idx) => {
+      return (
+        <div key={idx} className="w-full h-full flex flex-col items-center justify-center p-1 select-none pointer-events-none">
+          <span className="font-chinese font-bold text-xs sm:text-sm text-slate-800 leading-tight mb-0.5">
+            {w.word || w}
           </span>
-        )}
-      </div>
-    );
-  });
+          {w.pinyin && (
+            <span className="text-[9px] font-semibold text-rose-500 leading-tight">
+              {w.pinyin}
+            </span>
+          )}
+        </div>
+      );
+    });
 
   return (
     <motion.div

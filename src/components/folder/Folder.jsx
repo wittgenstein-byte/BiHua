@@ -28,10 +28,9 @@ export const Folder = ({
   className = ''
 }) => {
   const maxItems = 3;
-  const papers = items.slice(0, maxItems);
-  while (papers.length < maxItems) {
-    papers.push(null);
-  }
+  // Only keep valid items (no padding with empty null items)
+  const papers = items.filter(Boolean).slice(0, maxItems);
+  const totalPapers = papers.length;
 
   const [paperOffsets, setPaperOffsets] = useState(
     Array.from({ length: maxItems }, () => ({ x: 0, y: 0 }))
@@ -72,7 +71,7 @@ export const Folder = ({
     '--paper-3': paper3
   };
 
-  const folderClassName = `folder ${isOpen ? 'open' : ''}`.trim();
+  const folderClassName = `folder ${isOpen ? 'open' : ''} ${totalPapers === 0 ? 'folder--empty' : ''}`.trim();
   const scaleStyle = { transform: `scale(${size})`, transformOrigin: 'center center' };
 
   return (
@@ -93,10 +92,11 @@ export const Folder = ({
         aria-label={isOpen ? 'Close folder' : 'Open folder'}
       >
         <div className="folder__back">
+          {/* Render ONLY real paper items according to actual count */}
           {papers.map((item, i) => (
             <div
               key={i}
-              className={`paper paper-${i + 1}`}
+              className={`paper paper-${i + 1} paper-count-${totalPapers}`}
               onMouseMove={e => handlePaperMouseMove(e, i)}
               onMouseLeave={e => handlePaperMouseLeave(e, i)}
               style={

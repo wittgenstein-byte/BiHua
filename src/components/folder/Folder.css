@@ -41,41 +41,6 @@
   transform: translateY(-6px);
 }
 
-.folder.open .paper:nth-child(1) {
-  transform: translate(-115%, -65%) rotateZ(-14deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  opacity: 1;
-  z-index: 5;
-}
-
-.folder.open .paper:nth-child(1):hover {
-  transform: translate(-115%, -65%) rotateZ(-14deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  z-index: 10;
-}
-
-.folder.open .paper:nth-child(2) {
-  transform: translate(15%, -65%) rotateZ(14deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  height: 85%;
-  opacity: 1;
-  z-index: 5;
-}
-
-.folder.open .paper:nth-child(2):hover {
-  transform: translate(15%, -65%) rotateZ(14deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  z-index: 10;
-}
-
-.folder.open .paper:nth-child(3) {
-  transform: translate(-50%, -95%) rotateZ(4deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  height: 85%;
-  opacity: 1;
-  z-index: 6;
-}
-
-.folder.open .paper:nth-child(3):hover {
-  transform: translate(-50%, -95%) rotateZ(4deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
-  z-index: 10;
-}
-
 .folder.open .folder__front {
   transform: skew(15deg) scaleY(0.6);
 }
@@ -84,6 +49,80 @@
   transform: skew(-15deg) scaleY(0.6);
 }
 
+/* ──── Papers Fanning (3 Papers Default) ──── */
+.folder.open .paper-count-3.paper-1 {
+  transform: translate(-115%, -65%) rotateZ(-14deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  opacity: 1;
+  z-index: 5;
+}
+
+.folder.open .paper-count-3.paper-1:hover {
+  transform: translate(-115%, -65%) rotateZ(-14deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+.folder.open .paper-count-3.paper-2 {
+  transform: translate(15%, -65%) rotateZ(14deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  height: 85%;
+  opacity: 1;
+  z-index: 5;
+}
+
+.folder.open .paper-count-3.paper-2:hover {
+  transform: translate(15%, -65%) rotateZ(14deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+.folder.open .paper-count-3.paper-3 {
+  transform: translate(-50%, -95%) rotateZ(4deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  height: 85%;
+  opacity: 1;
+  z-index: 6;
+}
+
+.folder.open .paper-count-3.paper-3:hover {
+  transform: translate(-50%, -95%) rotateZ(4deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+/* ──── Papers Fanning (2 Papers Layout) ──── */
+.folder.open .paper-count-2.paper-1 {
+  transform: translate(-105%, -70%) rotateZ(-12deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  opacity: 1;
+  z-index: 5;
+}
+
+.folder.open .paper-count-2.paper-1:hover {
+  transform: translate(-105%, -70%) rotateZ(-12deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+.folder.open .paper-count-2.paper-2 {
+  transform: translate(5%, -70%) rotateZ(12deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  height: 85%;
+  opacity: 1;
+  z-index: 6;
+}
+
+.folder.open .paper-count-2.paper-2:hover {
+  transform: translate(5%, -70%) rotateZ(12deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+/* ──── Papers Fanning (1 Paper Centered Layout) ──── */
+.folder.open .paper-count-1.paper-1 {
+  transform: translate(-50%, -90%) rotateZ(0deg) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  height: 85%;
+  opacity: 1;
+  z-index: 6;
+}
+
+.folder.open .paper-count-1.paper-1:hover {
+  transform: translate(-50%, -90%) rotateZ(0deg) scale(1.1) translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  z-index: 10;
+}
+
+/* ──── Folder Structure ──── */
 .folder__back {
   position: relative;
   width: 100px;
