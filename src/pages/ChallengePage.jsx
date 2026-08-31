@@ -21,7 +21,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useDictionary } from '../hooks/useDictionary';
 import { useDecks } from '../hooks/useDecks';
-import { Confetti } from '../components/magicui/confetti';
+import confetti from 'canvas-confetti';
 
 /**
  * DraggableCard
@@ -134,7 +134,7 @@ function DraggableCard({
 
       {/* Card Center: Hanzi & Pinyin/Meaning Toggle */}
       <div className="flex flex-col items-center text-center my-auto z-10">
-        <h1 className="font-chinese text-6xl sm:text-7xl font-extrabold text-slate-900 dark:text-white tracking-tight drop-shadow-sm mb-3">
+        <h1 className="font-chinese text-6xl sm:text-7xl font-medium sm:font-semibold text-slate-900 dark:text-white tracking-wide drop-shadow-sm mb-3">
           {word.word}
         </h1>
 
@@ -381,12 +381,55 @@ export function ChallengePage() {
   const isAllGotIt = isGameOver && deck.length > 0 && missedWords.length === 0 && masteredWords.length === deck.length;
   const progressPercent = deck.length > 0 ? Math.round(((currentIndex + (isGameOver ? 1 : 0)) / deck.length) * 100) : 0;
 
-  // Handle manual confetti trigger
-  const handleManualConfettiTrigger = () => {
-    if (isAllGotIt && manualReplayCount < 1) {
-      confettiRef.current?.fireCannons();
-      setManualReplayCount(prev => prev + 1);
+  // Direct Confetti Celebration Burst
+  const fireCelebration = useCallback((isPerfect = false) => {
+    try {
+      if (isPerfect) {
+        // Dual cannon celebration
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 65,
+          origin: { x: 0.15, y: 0.7 },
+          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
+        });
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 65,
+          origin: { x: 0.85, y: 0.7 },
+          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4', '#ec4899', '#8b5cf6']
+        });
+      } else {
+        // Center celebration
+        confetti({
+          particleCount: 65,
+          spread: 75,
+          origin: { y: 0.6 },
+          colors: ['#e11d48', '#f59e0b', '#10b981', '#06b6d4']
+        });
+      }
+    } catch (e) {
+      console.error('Confetti error:', e);
     }
+  }, []);
+
+  // Automatically trigger confetti when game finishes
+  useEffect(() => {
+    if (isGameOver && deck.length > 0) {
+      const isPerfect = missedWords.length === 0 && masteredWords.length === deck.length;
+      // Slight delay so the results screen has animated in
+      const timer = setTimeout(() => {
+        fireCelebration(isPerfect);
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [isGameOver, deck.length, missedWords.length, masteredWords.length, fireCelebration]);
+
+  // Handle manual confetti trigger on clicking trophy
+  const handleManualConfettiTrigger = () => {
+    const isPerfect = missedWords.length === 0 && masteredWords.length === deck.length;
+    fireCelebration(isPerfect);
   };
 
   // Not Found / Empty Folder State
@@ -428,14 +471,6 @@ export function ChallengePage() {
   return (
     <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 select-none overflow-hidden transition-colors">
       
-      {/* Confetti Celebration Layer */}
-      {isAllGotIt && (
-        <Confetti
-          ref={confettiRef}
-          className="absolute inset-0 z-40 size-full pointer-events-none"
-        />
-      )}
-
       {/* ──── TOP IMMERSIVE GAME HEADER ──── */}
       <header className="px-4 sm:px-8 py-4 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">

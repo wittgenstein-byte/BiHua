@@ -139,7 +139,7 @@ export function CharacterDetailPage() {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="font-chinese text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h1 className="font-chinese text-5xl font-bold text-slate-900 dark:text-white tracking-normal">
                 {wordObj.word}
               </h1>
               <span className="text-xs font-bold px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30">

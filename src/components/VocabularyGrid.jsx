@@ -48,7 +48,7 @@ export function VocabularyGrid({ words, onSelectWord, onPracticeWord }) {
               {/* Top Bar: Character & Level Badge / Bookmark Button */}
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="font-chinese text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
+                  <span className="font-chinese text-4xl font-semibold tracking-normal text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
                     {item.word}
                   </span>
                   <div className="flex items-center gap-1.5">

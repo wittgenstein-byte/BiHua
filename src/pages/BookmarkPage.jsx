@@ -440,7 +440,7 @@ export function BookmarkPage() {
                     onClick={() => navigate(`/character/${encodeURIComponent(w.word)}`)}
                     className="cursor-pointer space-y-1 mb-4"
                   >
-                    <h3 className="font-chinese text-3xl font-extrabold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                    <h3 className="font-chinese text-3xl font-semibold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                       {w.word}
                     </h3>
                     <p className="text-sm font-bold text-rose-500 dark:text-rose-400">
