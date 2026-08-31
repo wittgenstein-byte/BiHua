@@ -48,10 +48,13 @@ export function VocabularyGrid({ words, onSelectWord, onPracticeWord }) {
               {/* Top Bar: Character & Level Badge / Bookmark Button */}
               <div>
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="font-chinese text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
+                  <span className="font-chinese text-4xl font-semibold tracking-normal text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-300 transition-colors">
                     {item.word}
                   </span>
                   <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                      {item.word.length} {item.word.length > 1 ? 'Chars' : 'Char'}
+                    </span>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${getLevelBadgeClass(item.level)}`}>
                       HSK {item.level}
                     </span>

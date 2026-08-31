@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import hskWords from '../data/hsk-words.json';
 import hskChars from '../data/hsk-chars.json';
 
@@ -8,22 +8,23 @@ export function useDictionary() {
   const words = useMemo(() => hskWords, []);
   const chars = useMemo(() => hskChars, []);
 
-  const getWordById = (id) => {
+  const getWordById = useCallback((id) => {
     return words.find(w => w.id === id) || null;
-  };
+  }, [words]);
 
-  const getWordsByChar = (char) => {
+  const getWordsByChar = useCallback((char) => {
     const charData = charsMap.get(char);
     return charData ? charData.appearsIn : [];
-  };
+  }, []);
 
-  const getCharDetails = (char) => {
+  const getCharDetails = useCallback((char) => {
     return charsMap.get(char) || null;
-  };
+  }, []);
 
   return {
     words,
     chars,
+    loading: false,
     getWordById,
     getWordsByChar,
     getCharDetails,
@@ -31,3 +32,9 @@ export function useDictionary() {
     totalChars: chars.length
   };
 }
+
+export function prefetchDictionary() {
+  // Synchronous static bundle - prefetch not needed
+}
+
+export default useDictionary;

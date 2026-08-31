@@ -2,32 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 
 const DECK_STORAGE_KEY = 'bihua_decks';
 
-const DEFAULT_DECKS = [
-  {
-    id: 'deck_hsk1',
-    name: 'HSK 1 Basics',
-    color: '#e11d48',
-    words: ['你好', '谢谢', '学习', '苹果']
-  },
-  {
-    id: 'deck_daily',
-    name: 'Daily Phrases',
-    color: '#0284c7',
-    words: ['快乐', '白天', '吃饭', '帮忙']
-  }
-];
-
 function getSavedDecks() {
   try {
     const saved = localStorage.getItem(DECK_STORAGE_KEY);
     if (!saved) {
-      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(DEFAULT_DECKS));
-      return DEFAULT_DECKS;
+      return [];
     }
-    return JSON.parse(saved);
+    const parsed = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    
+    // Automatically filter out legacy default mock decks if they were stored previously
+    const cleaned = parsed.filter(d => d && d.id !== 'deck_hsk1' && d.id !== 'deck_daily');
+    if (cleaned.length !== parsed.length) {
+      localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
   } catch (err) {
     console.error('Error reading decks from localStorage:', err);
-    return DEFAULT_DECKS;
+    return [];
   }
 }
 
@@ -61,11 +53,12 @@ export function useDecks() {
     }
   };
 
-  const createDeck = useCallback(({ name, color = '#e11d48', words = [] }) => {
+  const createDeck = useCallback(({ name, description = '', color = '#e11d48', words = [] }) => {
     const current = getSavedDecks();
     const newDeck = {
       id: `deck_${Date.now()}`,
-      name: name.trim() || 'New Stack Deck',
+      name: name.trim() || 'New Folder Deck',
+      description: description.trim(),
       color,
       words: Array.from(new Set(words)),
       createdAt: new Date().toISOString()
@@ -95,11 +88,41 @@ export function useDecks() {
     saveDecks(updated);
   }, []);
 
+  const addWordsToDeck = useCallback((deckId, wordsToAdd) => {
+    const current = getSavedDecks();
+    const updated = current.map(d => {
+      if (d.id === deckId) {
+        return {
+          ...d,
+          words: Array.from(new Set([...d.words, ...wordsToAdd]))
+        };
+      }
+      return d;
+    });
+    saveDecks(updated);
+  }, []);
+
+  const removeWordFromDeck = useCallback((deckId, wordToRemove) => {
+    const current = getSavedDecks();
+    const updated = current.map(d => {
+      if (d.id === deckId) {
+        return {
+          ...d,
+          words: d.words.filter(w => w !== wordToRemove)
+        };
+      }
+      return d;
+    });
+    saveDecks(updated);
+  }, []);
+
   return {
     decks,
     createDeck,
     updateDeck,
-    deleteDeck
+    deleteDeck,
+    addWordsToDeck,
+    removeWordFromDeck
   };
 }
 

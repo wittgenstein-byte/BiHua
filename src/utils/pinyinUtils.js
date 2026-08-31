@@ -143,32 +143,3 @@ export function parsePinyinWithTones(pinyinStr = '', applySandhi = true) {
 export function parsePinyin(pinyinStr) {
   return parsePinyinWithTones(pinyinStr, true);
 }
-
-export function getToneColorClass(tone) {
-  return TONE_COLORS[tone] || TONE_COLORS[0];
-}
-
-export function getToneBadgeClass(tone) {
-  switch (tone) {
-    case 1:
-      return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
-    case 2:
-      return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
-    case 3:
-      return 'bg-sky-500/20 text-sky-300 border-sky-500/40';
-    case 4:
-      return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
-    default:
-      return 'bg-slate-800 text-slate-400 border-slate-700';
-  }
-}
-
-export function getToneName(tone) {
-  switch (tone) {
-    case 1: return '1st Tone (High Flat)';
-    case 2: return '2nd Tone (Rising)';
-    case 3: return '3rd Tone (Falling-Rising Full / Half)';
-    case 4: return '4th Tone (Falling)';
-    default: return 'Neutral Tone';
-  }
-}
