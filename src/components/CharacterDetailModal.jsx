@@ -140,7 +140,7 @@ export function CharacterDetailModal({ wordObj, initialMode = 'animate', onClose
   if (!wordObj) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
       <div className="relative w-full max-w-2xl glass-panel rounded-3xl border border-slate-700/80 shadow-2xl p-6 sm:p-8 my-8 text-slate-100">
         {/* Close Button */}
         <button
@@ -185,33 +185,35 @@ export function CharacterDetailModal({ wordObj, initialMode = 'animate', onClose
         )}
 
         {/* Mode Switcher inside Modal */}
-        <div className="flex items-center justify-center gap-2 mb-6 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800 w-max mx-auto">
+        <div className="w-full max-w-sm mx-auto flex items-center justify-center gap-1.5 mb-6 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
           <button
             onClick={() => setMode('animate')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               mode === 'animate'
                 ? 'bg-rose-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Play className="w-4 h-4" /> Animated Stroke Visualizer
+            <Play className="w-4 h-4 shrink-0" />
+            <span className="truncate">Stroke Order</span>
           </button>
           <button
             onClick={() => setMode('practice')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
               mode === 'practice'
                 ? 'bg-rose-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <PenTool className="w-4 h-4" /> Practice Mode
+            <PenTool className="w-4 h-4 shrink-0" />
+            <span className="truncate">Practice Mode</span>
           </button>
         </div>
 
         {/* Display Box with Tianzige Grid Background */}
-        <div className="flex flex-col items-center justify-center my-4">
-          <div className="tianzige-grid w-[280px] h-[280px] flex items-center justify-center relative rounded-2xl shadow-inner">
-            <div ref={containerRef} className="w-[280px] h-[280px]" />
+        <div className="flex flex-col items-center justify-center my-2">
+          <div className="tianzige-grid w-[260px] h-[260px] sm:w-[280px] sm:h-[280px] flex items-center justify-center relative rounded-2xl shadow-inner overflow-hidden">
+            <div ref={containerRef} className="w-[260px] h-[260px] sm:w-[280px] sm:h-[280px]" />
           </div>
         </div>
 
@@ -287,7 +289,7 @@ export function CharacterDetailModal({ wordObj, initialMode = 'animate', onClose
                   <CheckCircle className="w-6 h-6" /> Character Completed!
                 </div>
                 <div className="text-sm text-slate-300">
-                  Accuracy Score: <strong className="text-white text-base">{score}/100</strong> ({mistakes} mistakes)
+                  Score: <strong className="text-white text-base">{score}/100</strong> ({mistakes} mistakes)
                 </div>
                 <button
                   onClick={() => {

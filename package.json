@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/build-dictionary.mjs && vite build",
     "preview": "vite preview",
     "check:coverage": "node scripts/check-stroke-coverage.mjs",
     "build:data": "node scripts/build-dictionary.mjs && node scripts/check-stroke-coverage.mjs"

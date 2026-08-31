@@ -12,9 +12,11 @@ import {
   Timer,
   Eye,
   EyeOff,
-  Play
+  Play,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Confetti } from '../magicui/confetti';
 
 /**
  * DraggableCard
@@ -36,14 +38,14 @@ function DraggableCard({
 }) {
   const x = useMotionValue(0);
 
-  // 2. Non-linear rotation curve: gentle near center (0-40px), accelerating towards 20°
+  // Non-linear rotation curve: gentle near center (0-40px), accelerating towards 20°
   const rotate = useTransform(
     x,
     [-260, -140, -40, 0, 40, 140, 260],
     [-20, -11, -1.2, 0, 1.2, 11, 20]
   );
 
-  // 4. Stamp Opacity Deadzone: 0-30px is 0, fading in from 30px to 110px
+  // Stamp Opacity Deadzone: 0-30px is 0, fading in from 30px to 110px
   const rightStampOpacity = useTransform(x, [30, 110], [0, 1]);
   const leftStampOpacity = useTransform(x, [-110, -30], [1, 0]);
   const rightStampScale = useTransform(x, [30, 110], [0.85, 1.05]);
@@ -55,7 +57,7 @@ function DraggableCard({
       style={{
         x,
         rotate,
-        transformOrigin: '50% 100%', // 1. Pivot from bottom-center
+        transformOrigin: '50% 100%', // Pivot from bottom-center
       }}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
@@ -88,7 +90,6 @@ function DraggableCard({
         } else if (isSwipeLeft) {
           onAnswer(false);
         }
-        // If not met, Framer Motion automatically springs back to center (x=0, rotate=0)
       }}
       onClick={onFlip}
       className="absolute w-full max-w-[320px] aspect-[4/5] rounded-3xl bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-800 dark:to-slate-800/95 border-2 border-slate-200/90 dark:border-slate-700 shadow-[0_18px_40px_-5px_rgba(0,0,0,0.14)] dark:shadow-[0_20px_45px_-5px_rgba(0,0,0,0.65)] p-6 flex flex-col items-center justify-between cursor-grab active:cursor-grabbing hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors select-none overflow-hidden touch-none"
@@ -206,6 +207,7 @@ export function WordSnapChallengeModal({
   words = []
 }) {
   const navigate = useNavigate();
+  const confettiRef = useRef(null);
 
   // Game States
   const [deck, setDeck] = useState([]);
@@ -220,6 +222,9 @@ export function WordSnapChallengeModal({
   const [score, setScore] = useState(0);
   const [masteredWords, setMasteredWords] = useState([]);
   const [missedWords, setMissedWords] = useState([]);
+
+  // Replay confetti count (max 1 manual replay)
+  const [manualReplayCount, setManualReplayCount] = useState(0);
 
   // Timer Options (Zen vs 60s Blitz)
   const [timerMode, setTimerMode] = useState('zen'); // 'zen' | 'timed'
@@ -240,6 +245,7 @@ export function WordSnapChallengeModal({
       setScore(0);
       setMasteredWords([]);
       setMissedWords([]);
+      setManualReplayCount(0);
       setTimeLeft(60);
     }
   }, [isOpen, words]);
@@ -332,21 +338,38 @@ export function WordSnapChallengeModal({
     setScore(0);
     setMasteredWords([]);
     setMissedWords([]);
+    setManualReplayCount(0);
     setTimeLeft(60);
   };
 
   if (!isOpen) return null;
 
-  const totalAnswered = masteredWords.length + missedWords.length;
-  const accuracyRate = totalAnswered > 0 ? Math.round((masteredWords.length / totalAnswered) * 100) : 0;
+  // Criteria: ONLY trigger celebration if 100% of all cards were "Got It" (mastered with 0 misses)
+  const isAllGotIt = isGameOver && deck.length > 0 && missedWords.length === 0 && masteredWords.length === deck.length;
   const progressPercent = deck.length > 0 ? Math.round(((currentIndex + (isGameOver ? 1 : 0)) / deck.length) * 100) : 0;
 
+  // Handle single allowed manual replay (single pop)
+  const handleManualConfettiTrigger = () => {
+    if (isAllGotIt && manualReplayCount < 1) {
+      confettiRef.current?.fireCannons();
+      setManualReplayCount(prev => prev + 1);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 dark:bg-slate-950/90 backdrop-blur-md animate-fade-in select-none">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 dark:bg-slate-950/90 backdrop-blur-md animate-fade-in select-none">
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col max-h-[92vh]">
         
+        {/* MagicUI Confetti Canvas Layer: ONLY shown if Got It for 100% of words (single pop) */}
+        {isAllGotIt && (
+          <Confetti
+            ref={confettiRef}
+            className="absolute inset-0 z-40 size-full pointer-events-none"
+          />
+        )}
+
         {/* Top Header Bar */}
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 z-20">
           <div className="flex items-center gap-2.5">
             <span
               className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
@@ -391,7 +414,7 @@ export function WordSnapChallengeModal({
 
         {/* Progress Bar & Streak Indicator */}
         {!isGameOver && (
-          <div className="px-5 pt-3 pb-1 bg-white dark:bg-slate-900">
+          <div className="px-5 pt-3 pb-1 bg-white dark:bg-slate-900 z-20">
             <div className="flex items-center justify-between text-xs font-bold mb-1.5">
               <span className="text-slate-400">
                 Card <strong className="text-slate-800 dark:text-slate-200">{currentIndex + 1}</strong> of <strong className="text-slate-800 dark:text-slate-200">{deck.length}</strong>
@@ -428,7 +451,7 @@ export function WordSnapChallengeModal({
         )}
 
         {/* Main Content Area */}
-        <div className="p-5 flex-1 flex flex-col items-center justify-center min-h-[380px] overflow-y-auto">
+        <div className="p-5 flex-1 flex flex-col items-center justify-center min-h-[380px] overflow-y-auto z-20">
           {!isGameOver && currentWord ? (
             /* Active Card Arena */
             <div className="w-full flex flex-col items-center gap-5">
@@ -482,49 +505,62 @@ export function WordSnapChallengeModal({
               </div>
             </div>
           ) : (
-            /* WordSnap Recap / Game Over Screen */
+            /* WordSnap Recap Screen */
             <div className="w-full flex flex-col items-center text-center space-y-6 py-2">
               
               {/* Trophy & Badge */}
-              <div className="relative">
-                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/20 animate-bounce">
-                  <Trophy className="w-10 h-10" />
+              <div
+                onClick={handleManualConfettiTrigger}
+                className={`relative group ${isAllGotIt && manualReplayCount < 1 ? 'cursor-pointer' : ''}`}
+                title={isAllGotIt && manualReplayCount < 1 ? 'Click to fire confetti (1 time)' : undefined}
+              >
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-rose-500 flex items-center justify-center text-white shadow-xl shadow-rose-500/20 group-hover:scale-105 active:scale-95 transition-all">
+                  <Trophy className="w-10 h-10 animate-bounce" />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-slate-900 text-amber-400 text-xs font-black px-2 py-0.5 rounded-full border border-amber-400">
+                <div className="absolute -bottom-2 -right-2 bg-slate-900 text-amber-400 text-xs font-black px-2 py-0.5 rounded-full border border-amber-400 shadow-md">
                   {score} XP
                 </div>
               </div>
 
-              {/* Title & Accuracy Score */}
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white">
-                  Sprint Completed! 🎉
+              {/* Title & Celebration */}
+              <div
+                onClick={handleManualConfettiTrigger}
+                className={`space-y-1 ${isAllGotIt && manualReplayCount < 1 ? 'cursor-pointer' : ''}`}
+              >
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
+                  <span>{isAllGotIt ? 'Perfect Mastery! 🎉' : 'Sprint Completed! 👍'}</span>
+                  {isAllGotIt && <Sparkles className="w-5 h-5 text-amber-500" />}
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  {accuracyRate >= 80 ? 'Incredible memory! You mastered this deck.' : 'Good job! Keep reviewing to lock in your memory.'}
+                  {isAllGotIt 
+                    ? 'Incredible! You got 100% of all words right in this folder!'
+                    : 'Good practice! Review the missed words below to master this deck.'}
                 </p>
               </div>
 
               {/* Key Metrics Bento */}
               <div className="grid grid-cols-3 gap-2.5 w-full">
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex flex-col items-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accuracy</span>
-                  <span className={`text-xl font-black ${accuracyRate >= 75 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'}`}>
-                    {accuracyRate}%
+                {/* Mastered */}
+                <div className="p-3 rounded-2xl bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-200/60 dark:border-emerald-500/20 flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Mastered</span>
+                  <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                    <CheckCircle2 className="w-4 h-4" /> {masteredWords.length}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex flex-col items-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Max Streak</span>
-                  <span className="text-xl font-black text-rose-500 dark:text-rose-400 flex items-center gap-0.5">
-                    <Flame className="w-4 h-4 fill-rose-500" /> {maxStreak}
+                {/* Need Review */}
+                <div className="p-3 rounded-2xl bg-rose-50/50 dark:bg-rose-500/10 border border-rose-200/60 dark:border-rose-500/20 flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">Review</span>
+                  <span className="text-xl font-black text-rose-500 flex items-center gap-0.5">
+                    <XCircle className="w-4 h-4" /> {missedWords.length}
                   </span>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 flex flex-col items-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reviewed</span>
-                  <span className="text-xl font-black text-slate-800 dark:text-white">
-                    {totalAnswered}
+                {/* Max Streak */}
+                <div className="p-3 rounded-2xl bg-amber-50/50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 flex flex-col items-center">
+                  <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Streak</span>
+                  <span className="text-xl font-black text-amber-500 flex items-center gap-0.5">
+                    <Flame className="w-4 h-4 fill-amber-500" /> {maxStreak}
                   </span>
                 </div>
               </div>

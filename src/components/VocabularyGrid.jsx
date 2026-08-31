@@ -52,6 +52,9 @@ export function VocabularyGrid({ words, onSelectWord, onPracticeWord }) {
                     {item.word}
                   </span>
                   <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-slate-700">
+                      {item.word.length} {item.word.length > 1 ? 'Chars' : 'Char'}
+                    </span>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${getLevelBadgeClass(item.level)}`}>
                       HSK {item.level}
                     </span>
