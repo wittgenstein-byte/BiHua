@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'motion/react';
 import {
   X,
@@ -15,7 +15,8 @@ import {
   ArrowLeft,
   Sparkles,
   PenTool,
-  Folder
+  Folder,
+  Plus
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBookmarks } from '../hooks/useBookmarks';
@@ -90,7 +91,7 @@ function DraggableCard({
         }
       }}
       onClick={onFlip}
-      className="absolute w-full max-w-[340px] aspect-[4/5] rounded-3xl bg-white dark:bg-slate-850 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-800 dark:to-slate-850 border-2 border-slate-200/90 dark:border-slate-700 shadow-[0_20px_50px_-5px_rgba(0,0,0,0.14)] dark:shadow-[0_25px_60px_-5px_rgba(0,0,0,0.7)] p-6 sm:p-7 flex flex-col items-center justify-between cursor-grab active:cursor-grabbing hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors select-none overflow-hidden touch-none"
+      className="absolute w-full max-w-[340px] aspect-[4/5] rounded-3xl bg-white dark:bg-slate-800 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-800 dark:to-slate-900 border-2 border-slate-200/90 dark:border-slate-700 shadow-[0_20px_50px_-5px_rgba(0,0,0,0.14)] dark:shadow-[0_25px_60px_-5px_rgba(0,0,0,0.7)] p-6 sm:p-7 flex flex-col items-center justify-between cursor-grab active:cursor-grabbing hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors select-none overflow-hidden touch-none"
     >
       {/* Real-time Progressive Stamp: GOT IT! (Right) */}
       <motion.div
@@ -199,7 +200,6 @@ function BackgroundCardPreview({ nextWord }) {
 export function ChallengePage() {
   const { folderId } = useParams();
   const navigate = useNavigate();
-  const confettiRef = useRef(null);
 
   const { bookmarks } = useBookmarks();
   const { words } = useDictionary();
@@ -220,16 +220,32 @@ export function ChallengePage() {
     return decks.find(d => d.id === folderId) || null;
   }, [folderId, isMaster, decks]);
 
+  // Resolve target words with intelligent fallback
   const targetWords = useMemo(() => {
     if (!words || words.length === 0) return [];
+
     if (isMaster) {
-      const bookmarkSet = new Set(bookmarks);
-      return words.filter(w => bookmarkSet.has(w.word));
+      // 1. Gather all bookmark words
+      const bookmarkSet = new Set(bookmarks || []);
+      
+      // 2. Also gather words from all custom decks
+      (decks || []).forEach(d => {
+        (d.words || []).forEach(w => bookmarkSet.add(w));
+      });
+
+      const matched = words.filter(w => bookmarkSet.has(w.word));
+
+      // 3. Fallback to top HSK 1 core starter words if user has 0 saved words
+      if (matched.length === 0) {
+        return words.filter(w => w.level === 1).slice(0, 10);
+      }
+      return matched;
     }
-    if (!folder || !folder.words) return [];
+
+    if (!folder || !folder.words || folder.words.length === 0) return [];
     const folderWordSet = new Set(folder.words);
     return words.filter(w => folderWordSet.has(w.word));
-  }, [isMaster, bookmarks, words, folder]);
+  }, [isMaster, bookmarks, decks, words, folder]);
 
   // Game States
   const [deck, setDeck] = useState(() => {
@@ -247,14 +263,12 @@ export function ChallengePage() {
   const [masteredWords, setMasteredWords] = useState([]);
   const [missedWords, setMissedWords] = useState([]);
 
-  const [manualReplayCount, setManualReplayCount] = useState(0);
-
   // Timer Options (Zen vs 60s Blitz)
   const [timerMode, setTimerMode] = useState('zen'); // 'zen' | 'timed'
   const [timeLeft, setTimeLeft] = useState(60);
   const timerRef = useRef(null);
 
-  // Re-sync deck if targetWords change
+  // Re-sync deck if targetWords change and deck is empty
   useEffect(() => {
     if (targetWords.length > 0 && deck.length === 0) {
       const shuffled = [...targetWords].sort(() => Math.random() - 0.5);
@@ -365,7 +379,6 @@ export function ChallengePage() {
     setScore(0);
     setMasteredWords([]);
     setMissedWords([]);
-    setManualReplayCount(0);
     setTimeLeft(60);
   };
 
@@ -418,7 +431,7 @@ export function ChallengePage() {
   useEffect(() => {
     if (isGameOver && deck.length > 0) {
       const isPerfect = missedWords.length === 0 && masteredWords.length === deck.length;
-      // Slight delay so the results screen has animated in
+      // Slight delay so results modal has rendered
       const timer = setTimeout(() => {
         fireCelebration(isPerfect);
       }, 250);
@@ -432,7 +445,7 @@ export function ChallengePage() {
     fireCelebration(isPerfect);
   };
 
-  // Not Found / Empty Folder State
+  // Not Found / Empty Folder State (Only for custom folders that don't exist or have 0 words)
   if (!folder || targetWords.length === 0) {
     return (
       <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none text-slate-800 dark:text-slate-100">
@@ -446,7 +459,7 @@ export function ChallengePage() {
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8 font-medium leading-relaxed">
           {!folder 
             ? 'The requested folder could not be found or may have been deleted.' 
-            : 'Add some bookmarked words to this folder first before launching the WordSnap Challenge.'}
+            : 'Add some words to this folder first before launching the WordSnap Challenge.'}
         </p>
 
         <div className="flex items-center gap-3">
@@ -458,10 +471,10 @@ export function ChallengePage() {
           </button>
           
           <button
-            onClick={() => navigate('/dictionary')}
+            onClick={() => navigate(folder ? `/bookmark/${folder.id}` : '/dictionary')}
             className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
           >
-            <Sparkles className="w-4 h-4" /> Explore Dictionary
+            <Plus className="w-4 h-4" /> Manage Words
           </button>
         </div>
       </div>
@@ -471,6 +484,13 @@ export function ChallengePage() {
   return (
     <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 select-none overflow-hidden transition-colors">
       
+      {/* Background ambient glowing gradient decoration */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-rose-500/10 dark:bg-rose-500/15 blur-3xl" />
+        <div className="absolute top-1/2 -right-32 w-96 h-96 rounded-full bg-amber-500/10 dark:bg-amber-500/15 blur-3xl" />
+        <div className="absolute -bottom-32 left-1/3 w-96 h-96 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 blur-3xl" />
+      </div>
+
       {/* ──── TOP IMMERSIVE GAME HEADER ──── */}
       <header className="px-4 sm:px-8 py-4 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
@@ -533,7 +553,7 @@ export function ChallengePage() {
           <div className="max-w-xl mx-auto space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-slate-500 dark:text-slate-400">
-                Card <strong className="text-slate-900 dark:text-white font-extrabold">{currentIndex + 1}</strong> of <strong className="text-slate-900 dark:text-white font-extrabold">{deck.length}</strong>
+                Card <strong className="text-slate-900 dark:text-white font-extrabold">{Math.min(currentIndex + 1, deck.length)}</strong> of <strong className="text-slate-900 dark:text-white font-extrabold">{deck.length}</strong>
               </span>
 
               {/* Fire Streak & Score */}
@@ -637,10 +657,10 @@ export function ChallengePage() {
                   isAllGotIt
                     ? 'bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce'
                     : masteredWords.length >= deck.length / 2
-                    ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                    : 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                    ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 cursor-pointer hover:scale-105'
+                    : 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 cursor-pointer hover:scale-105'
                 }`}
-                title={isAllGotIt ? 'Click for more confetti!' : ''}
+                title="Click for celebratory confetti!"
               >
                 {isAllGotIt ? (
                   <Trophy className="w-10 h-10 fill-current" />
