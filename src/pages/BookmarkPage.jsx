@@ -24,7 +24,6 @@ import { FolderCard } from '../components/folder/FolderCard';
 import { NewFolderCard } from '../components/folder/NewFolderCard';
 import { FolderModal } from '../components/folder/FolderModal';
 import { AddWordsToFolderModal } from '../components/folder/AddWordsToFolderModal';
-import { WordSnapChallengeModal } from '../components/challenge/WordSnapChallengeModal';
 import { SearchBar } from '../components/SearchBar';
 
 export function BookmarkPage() {
@@ -45,11 +44,6 @@ export function BookmarkPage() {
 
   const [isAddWordsModalOpen, setIsAddWordsModalOpen] = useState(false);
   const [targetFolderForWords, setTargetFolderForWords] = useState(null);
-
-  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
-  const [challengeTitle, setChallengeTitle] = useState('Challenge Deck');
-  const [challengeColor, setChallengeColor] = useState('#e11d48');
-  const [challengeWords, setChallengeWords] = useState([]);
 
   // Search & Filter inside Explorer
   const [query, setQuery] = useState('');
@@ -174,23 +168,7 @@ export function BookmarkPage() {
 
   // Launch WordSnap challenge for a specific folder
   const handleLaunchChallenge = (folderObj) => {
-    let targetWords = [];
-    if (folderObj.id === 'all') {
-      targetWords = allBookmarkedWords;
-    } else {
-      const wordSet = new Set(folderObj.words || []);
-      targetWords = allBookmarkedWords.filter(w => wordSet.has(w.word));
-    }
-
-    if (targetWords.length === 0) {
-      alert('This folder has no words to practice yet! Add some words first.');
-      return;
-    }
-
-    setChallengeTitle(folderObj.name);
-    setChallengeColor(folderObj.color || '#e11d48');
-    setChallengeWords(targetWords);
-    setIsChallengeOpen(true);
+    navigate(`/bookmark/${folderObj.id}/challenge`);
   };
 
   return (
@@ -537,15 +515,6 @@ export function BookmarkPage() {
             updateDeck(targetFolderForWords.id, { words: wordsArray });
           }
         }}
-      />
-
-      {/* 3. WordSnap Challenge Mode Modal */}
-      <WordSnapChallengeModal
-        isOpen={isChallengeOpen}
-        onClose={() => setIsChallengeOpen(false)}
-        deckTitle={challengeTitle}
-        deckColor={challengeColor}
-        words={challengeWords}
       />
 
     </div>
