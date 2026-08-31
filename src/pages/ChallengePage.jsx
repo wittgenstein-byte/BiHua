@@ -90,7 +90,7 @@ function DraggableCard({
         }
       }}
       onClick={onFlip}
-      className="absolute w-full max-w-[340px] aspect-[4/5] rounded-3xl bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-800 dark:to-slate-800/95 border-2 border-slate-200/90 dark:border-slate-700 shadow-[0_20px_50px_-5px_rgba(0,0,0,0.18)] dark:shadow-[0_25px_60px_-5px_rgba(0,0,0,0.7)] p-6 sm:p-7 flex flex-col items-center justify-between cursor-grab active:cursor-grabbing hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors select-none overflow-hidden touch-none"
+      className="absolute w-full max-w-[340px] aspect-[4/5] rounded-3xl bg-white dark:bg-slate-850 bg-gradient-to-b from-white to-slate-50/95 dark:from-slate-800 dark:to-slate-850 border-2 border-slate-200/90 dark:border-slate-700 shadow-[0_20px_50px_-5px_rgba(0,0,0,0.14)] dark:shadow-[0_25px_60px_-5px_rgba(0,0,0,0.7)] p-6 sm:p-7 flex flex-col items-center justify-between cursor-grab active:cursor-grabbing hover:border-rose-300 dark:hover:border-rose-500/50 transition-colors select-none overflow-hidden touch-none"
     >
       {/* Real-time Progressive Stamp: GOT IT! (Right) */}
       <motion.div
@@ -126,7 +126,7 @@ function DraggableCard({
             speakWord(word.word);
           }}
           className="w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-sm"
-          title="Pronounce Hanzi"
+          title="Pronounce Hanzi (or press V)"
         >
           <Volume2 className="w-4 h-4" />
         </button>
@@ -201,8 +201,8 @@ export function ChallengePage() {
   const navigate = useNavigate();
   const confettiRef = useRef(null);
 
-  const { bookmarks, totalBookmarks } = useBookmarks();
-  const { words, loading: dictLoading } = useDictionary();
+  const { bookmarks } = useBookmarks();
+  const { words } = useDictionary();
   const { decks } = useDecks();
 
   // Resolve target folder and words
@@ -232,7 +232,9 @@ export function ChallengePage() {
   }, [isMaster, bookmarks, words, folder]);
 
   // Game States
-  const [deck, setDeck] = useState([]);
+  const [deck, setDeck] = useState(() => {
+    return targetWords.length > 0 ? [...targetWords].sort(() => Math.random() - 0.5) : [];
+  });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [exitDirection, setExitDirection] = useState(1);
@@ -252,24 +254,13 @@ export function ChallengePage() {
   const [timeLeft, setTimeLeft] = useState(60);
   const timerRef = useRef(null);
 
-  // Initialize and shuffle deck
+  // Re-sync deck if targetWords change
   useEffect(() => {
-    if (targetWords.length > 0) {
+    if (targetWords.length > 0 && deck.length === 0) {
       const shuffled = [...targetWords].sort(() => Math.random() - 0.5);
       setDeck(shuffled);
-      setCurrentIndex(0);
-      setIsFlipped(false);
-      setIsGameOver(false);
-      setExitDirection(1);
-      setStreak(0);
-      setMaxStreak(0);
-      setScore(0);
-      setMasteredWords([]);
-      setMissedWords([]);
-      setManualReplayCount(0);
-      setTimeLeft(60);
     }
-  }, [targetWords]);
+  }, [targetWords, deck.length]);
 
   // Handle Blitz Timer
   useEffect(() => {
@@ -307,14 +298,7 @@ export function ChallengePage() {
   const currentWord = deck[currentIndex];
   const nextWord = deck[currentIndex + 1];
 
-  // Auto-speak on new card
-  useEffect(() => {
-    if (currentWord && !isGameOver) {
-      speakWord(currentWord.word);
-    }
-  }, [currentIndex, isGameOver]);
-
-  // Handle keyboard shortcuts (ArrowLeft = Practice, ArrowRight = Got it, Space = Flip)
+  // Handle keyboard shortcuts (ArrowLeft = Practice, ArrowRight = Got it, Space = Flip, V/S = Speak)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (isGameOver || !currentWord) return;
@@ -327,6 +311,9 @@ export function ChallengePage() {
       } else if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
         setIsFlipped(prev => !prev);
+      } else if (e.key === 'v' || e.key === 'V' || e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        speakWord(currentWord.word);
       }
     };
 
@@ -402,30 +389,18 @@ export function ChallengePage() {
     }
   };
 
-  // Loading State
-  if (dictLoading) {
-    return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center text-white space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 animate-spin">
-          <Zap className="w-6 h-6" />
-        </div>
-        <p className="text-slate-400 font-semibold text-sm">Loading WordSnap Challenge...</p>
-      </div>
-    );
-  }
-
   // Not Found / Empty Folder State
   if (!folder || targetWords.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none">
-        <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto mb-6 shadow-xl shadow-rose-950/50">
+      <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col items-center justify-center p-6 text-center select-none text-slate-800 dark:text-slate-100">
+        <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mx-auto mb-6 shadow-xl shadow-rose-950/20">
           <Folder className="w-10 h-10" />
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-black text-white font-chinese mb-2">
+        <h1 className="text-2xl sm:text-3xl font-black font-chinese mb-2 text-slate-900 dark:text-white">
           {!folder ? 'Folder Not Found' : 'No Words in this Folder'}
         </h1>
-        <p className="text-sm text-slate-400 max-w-md mx-auto mb-8 font-medium leading-relaxed">
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-8 font-medium leading-relaxed">
           {!folder 
             ? 'The requested folder could not be found or may have been deleted.' 
             : 'Add some bookmarked words to this folder first before launching the WordSnap Challenge.'}
@@ -434,14 +409,14 @@ export function ChallengePage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/bookmark')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all shadow-md active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold transition-all shadow-md active:scale-95 border border-slate-200 dark:border-slate-700"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Folders
           </button>
           
           <button
             onClick={() => navigate('/dictionary')}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-950/50 hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95"
           >
             <Sparkles className="w-4 h-4" /> Explore Dictionary
           </button>
@@ -451,7 +426,7 @@ export function ChallengePage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col text-slate-100 select-none overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-[#f8fafc] dark:bg-slate-950 flex flex-col text-slate-800 dark:text-slate-100 select-none overflow-hidden transition-colors">
       
       {/* Confetti Celebration Layer */}
       {isAllGotIt && (
@@ -462,11 +437,11 @@ export function ChallengePage() {
       )}
 
       {/* ──── TOP IMMERSIVE GAME HEADER ──── */}
-      <header className="px-4 sm:px-8 py-4 border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md flex items-center justify-between z-20 shrink-0">
+      <header className="px-4 sm:px-8 py-4 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/60 backdrop-blur-md flex items-center justify-between z-20 shrink-0">
         <div className="flex items-center gap-3">
           <button
             onClick={handleExit}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs transition-colors shadow-sm"
             title="Exit Challenge"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -479,10 +454,10 @@ export function ChallengePage() {
               style={{ backgroundColor: folder.color || '#e11d48' }}
             />
             <div>
-              <h2 className="text-sm sm:text-base font-extrabold text-white font-chinese leading-tight truncate max-w-[200px] sm:max-w-[320px]">
+              <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white font-chinese leading-tight truncate max-w-[200px] sm:max-w-[320px]">
                 {folder.name}
               </h2>
-              <p className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
+              <p className="text-[11px] font-bold text-rose-500 dark:text-rose-400 flex items-center gap-1">
                 <Zap className="w-3 h-3 fill-current" /> WordSnap Challenge
               </p>
             </div>
@@ -496,8 +471,8 @@ export function ChallengePage() {
               onClick={() => setTimerMode(prev => prev === 'zen' ? 'timed' : 'zen')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs font-extrabold transition-all ${
                 timerMode === 'timed'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
-                  : 'bg-slate-800/80 text-slate-400 hover:text-slate-200'
+                  ? 'bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 dark:border-amber-500/40 shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
               title="Toggle Blitz Timer Mode"
             >
@@ -509,7 +484,7 @@ export function ChallengePage() {
           {/* Close Game Button */}
           <button
             onClick={handleExit}
-            className="p-2 rounded-2xl bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
             title="Close (ESC)"
           >
             <X className="w-4 h-4" />
@@ -519,11 +494,11 @@ export function ChallengePage() {
 
       {/* ──── PROGRESS & SCORE BAR ──── */}
       {!isGameOver && (
-        <div className="px-4 sm:px-8 pt-3 pb-2 bg-slate-900/40 border-b border-slate-800/50 z-20 shrink-0">
+        <div className="px-4 sm:px-8 pt-3 pb-2 bg-white/50 dark:bg-slate-900/40 border-b border-slate-200/60 dark:border-slate-800/50 z-20 shrink-0">
           <div className="max-w-xl mx-auto space-y-2">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-400">
-                Card <strong className="text-white font-extrabold">{currentIndex + 1}</strong> of <strong className="text-white font-extrabold">{deck.length}</strong>
+              <span className="text-slate-500 dark:text-slate-400">
+                Card <strong className="text-slate-900 dark:text-white font-extrabold">{currentIndex + 1}</strong> of <strong className="text-slate-900 dark:text-white font-extrabold">{deck.length}</strong>
               </span>
 
               {/* Fire Streak & Score */}
@@ -533,19 +508,19 @@ export function ChallengePage() {
                     streak >= 3
                       ? 'bg-gradient-to-r from-amber-500 to-rose-500 text-white shadow-lg shadow-rose-500/40 animate-pulse'
                       : streak > 0
-                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                      : 'bg-slate-800 text-slate-400'
+                      ? 'bg-amber-500/15 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                   }`}
                 >
                   <Flame className={`w-3.5 h-3.5 ${streak > 0 ? 'fill-current' : ''}`} />
                   <span>{streak} Streak {streak >= 5 ? '🔥 x3' : streak >= 3 ? '⚡ x2' : ''}</span>
                 </div>
-                <span className="text-xs font-black text-rose-400">{score} XP</span>
+                <span className="text-xs font-black text-rose-500 dark:text-rose-400">{score} XP</span>
               </div>
             </div>
 
             {/* Linear Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden shadow-inner">
+            <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden shadow-inner">
               <motion.div
                 className="h-full bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 rounded-full"
                 initial={{ width: 0 }}
@@ -584,7 +559,7 @@ export function ChallengePage() {
             <div className="flex items-center justify-center gap-3 w-full max-w-[340px]">
               <button
                 onClick={() => handleAnswer(false)}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-black text-sm border border-rose-500/30 shadow-md transition-all hover:scale-105 active:scale-95"
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-500/15 dark:hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 font-black text-sm border border-rose-200 dark:border-rose-500/30 shadow-md transition-all hover:scale-105 active:scale-95"
                 title="Press Left Arrow Key"
               >
                 <XCircle className="w-4 h-4" /> Need Practice
@@ -592,15 +567,15 @@ export function ChallengePage() {
 
               <button
                 onClick={() => setIsFlipped(prev => !prev)}
-                className="p-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm border border-slate-700 transition-all active:scale-95 shadow-md"
+                className="p-3.5 rounded-2xl bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-md"
                 title="Toggle Reveal (Spacebar)"
               >
-                {isFlipped ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5 text-rose-400" />}
+                {isFlipped ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5 text-rose-500" />}
               </button>
 
               <button
                 onClick={() => handleAnswer(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 font-black text-sm border border-emerald-500/30 shadow-md transition-all hover:scale-105 active:scale-95"
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 font-black text-sm border border-emerald-200 dark:border-emerald-500/30 shadow-md transition-all hover:scale-105 active:scale-95"
                 title="Press Right Arrow Key"
               >
                 <CheckCircle2 className="w-4 h-4" /> Got It!
@@ -608,8 +583,8 @@ export function ChallengePage() {
             </div>
 
             {/* Keyboard shortcut hints */}
-            <p className="text-[11px] font-medium text-slate-500 hidden sm:block text-center">
-              Keyboard: <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">←</kbd> Practice &nbsp;•&nbsp; <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Space</kbd> Flip &nbsp;•&nbsp; <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">→</kbd> Got It
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 hidden sm:block text-center">
+              Keyboard: <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">←</kbd> Practice &nbsp;•&nbsp; <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Space</kbd> Flip &nbsp;•&nbsp; <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">V</kbd> Audio &nbsp;•&nbsp; <kbd className="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">→</kbd> Got It
             </p>
           </div>
         ) : (
@@ -617,7 +592,7 @@ export function ChallengePage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.92, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full max-w-lg bg-slate-900/80 rounded-3xl border border-slate-800 p-6 sm:p-8 space-y-6 text-center shadow-2xl backdrop-blur-md my-auto"
+            className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 space-y-6 text-center shadow-2xl backdrop-blur-md my-auto"
           >
             {/* Header Trophy & Badge */}
             <div className="space-y-3">
@@ -627,8 +602,8 @@ export function ChallengePage() {
                   isAllGotIt
                     ? 'bg-gradient-to-tr from-amber-500 to-rose-500 text-white cursor-pointer hover:scale-110 active:scale-95 animate-bounce'
                     : masteredWords.length >= deck.length / 2
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                    ? 'bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                    : 'bg-rose-500/15 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30'
                 }`}
                 title={isAllGotIt ? 'Click for more confetti!' : ''}
               >
@@ -642,34 +617,34 @@ export function ChallengePage() {
               </div>
 
               <div>
-                <h2 className="text-2xl sm:text-3xl font-black text-white font-chinese">
+                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-chinese">
                   {isAllGotIt
                     ? 'Perfect Mastery! 🏆'
                     : masteredWords.length >= deck.length / 2
                     ? 'Great Workout! ⚡'
                     : 'Keep Practicing! 💪'}
                 </h2>
-                <p className="text-xs sm:text-sm text-slate-400 font-medium mt-1">
-                  You completed all {deck.length} flashcards in <strong className="text-white">{folder.name}</strong>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+                  You completed all {deck.length} flashcards in <strong className="text-slate-900 dark:text-white">{folder.name}</strong>
                 </p>
               </div>
             </div>
 
             {/* Score & Streak Stats Grid */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Score</div>
-                <div className="text-xl font-black text-rose-400 mt-0.5">{score} XP</div>
+                <div className="text-xl font-black text-rose-500 dark:text-rose-400 mt-0.5">{score} XP</div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Max Streak</div>
-                <div className="text-xl font-black text-amber-400 mt-0.5">🔥 {maxStreak}</div>
+                <div className="text-xl font-black text-amber-500 dark:text-amber-400 mt-0.5">🔥 {maxStreak}</div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80">
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accuracy</div>
-                <div className="text-xl font-black text-emerald-400 mt-0.5">
+                <div className="text-xl font-black text-emerald-500 dark:text-emerald-400 mt-0.5">
                   {deck.length > 0 ? Math.round((masteredWords.length / deck.length) * 100) : 0}%
                 </div>
               </div>
@@ -678,8 +653,8 @@ export function ChallengePage() {
             {/* Review Cards breakdown */}
             <div className="space-y-2 text-left max-h-48 overflow-y-auto pr-1">
               {missedWords.length > 0 && (
-                <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 space-y-2">
-                  <div className="text-xs font-bold text-rose-400 flex items-center gap-1.5">
+                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 space-y-2">
+                  <div className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
                     <XCircle className="w-3.5 h-3.5" /> Words to Practice ({missedWords.length})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -687,7 +662,7 @@ export function ChallengePage() {
                       <span
                         key={idx}
                         onClick={() => navigate(`/character/${encodeURIComponent(w.word)}?mode=practice`)}
-                        className="px-2.5 py-1 rounded-xl bg-slate-900/90 text-rose-300 text-xs font-extrabold border border-rose-500/20 flex items-center gap-1 cursor-pointer hover:bg-rose-500 hover:text-white transition-colors"
+                        className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900/90 text-rose-600 dark:text-rose-300 text-xs font-extrabold border border-rose-200 dark:border-rose-500/20 flex items-center gap-1 cursor-pointer hover:bg-rose-500 hover:text-white transition-colors"
                         title="Practice writing"
                       >
                         {w.word} <PenTool className="w-3 h-3" />
@@ -698,15 +673,15 @@ export function ChallengePage() {
               )}
 
               {masteredWords.length > 0 && (
-                <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 space-y-2">
-                  <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 space-y-2">
+                  <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Mastered Words ({masteredWords.length})
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {masteredWords.map((w, idx) => (
                       <span
                         key={idx}
-                        className="px-2 py-0.5 rounded-lg bg-slate-900/80 text-emerald-300 text-xs font-bold border border-emerald-500/20"
+                        className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-500/20"
                       >
                         {w.word}
                       </span>
@@ -721,7 +696,7 @@ export function ChallengePage() {
               {missedWords.length > 0 && (
                 <button
                   onClick={() => handleRestart(true)}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-950/50 transition-all hover:scale-[1.02] active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-[1.02] active:scale-95"
                 >
                   <RotateCcw className="w-4 h-4" /> Practice Missed Words Only ({missedWords.length})
                 </button>
@@ -730,14 +705,14 @@ export function ChallengePage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleRestart(false)}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 transition-all active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                 >
                   <RotateCcw className="w-4 h-4" /> Replay All
                 </button>
 
                 <button
                   onClick={handleExit}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold text-xs border border-slate-700 transition-all active:scale-95"
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all active:scale-95"
                 >
                   <ArrowLeft className="w-4 h-4" /> Back to Folder
                 </button>
