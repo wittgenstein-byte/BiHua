@@ -1,15 +1,18 @@
 import React from 'react';
 import { SearchBar } from '../components/SearchBar';
 import { VocabularyGrid } from '../components/VocabularyGrid';
+import { PageSkeletonFallback } from '../components/PageSkeletonFallback';
 import { useSearch } from '../hooks/useSearch';
 import { useDictionary } from '../hooks/useDictionary';
 import { Sparkles, BookOpen, PenTool } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function DictionaryPage() {
-  const { query, setQuery, selectedLevel, setSelectedLevel, filteredWords, totalResults } = useSearch();
-  const { totalWords, totalChars } = useDictionary();
+  const { query, setQuery, selectedLevel, setSelectedLevel, filteredWords, totalResults, loading: searchLoading } = useSearch();
+  const { totalWords, totalChars, loading: dictLoading } = useDictionary();
   const navigate = useNavigate();
+
+  const isLoading = searchLoading || dictLoading;
 
   // Card click → Full Details & Animation page
   const handleCardClick = (word) => {
@@ -50,7 +53,7 @@ export function DictionaryPage() {
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Words</div>
                 <div className="text-lg font-black text-slate-900 dark:text-white">
-                  {totalWords.toLocaleString()}
+                  {isLoading ? '...' : totalWords.toLocaleString()}
                 </div>
               </div>
             </div>
@@ -62,7 +65,7 @@ export function DictionaryPage() {
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Strokes & Chars</div>
                 <div className="text-lg font-black text-slate-900 dark:text-white">
-                  {totalChars.toLocaleString()} 
+                  {isLoading ? '...' : totalChars.toLocaleString()} 
                 </div>
               </div>
             </div>
@@ -79,12 +82,36 @@ export function DictionaryPage() {
         totalResults={totalResults}
       />
 
-      {/* Vocabulary Grid */}
-      <VocabularyGrid
-        words={filteredWords}
-        onSelectWord={handleCardClick}
-        onPracticeWord={handlePracticeClick}
-      />
+      {/* Vocabulary Grid or Skeleton Loading */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-pulse">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-48 rounded-2xl bg-slate-900/40 border border-slate-800/60 p-5 flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-14 h-5 rounded-full bg-slate-800/80" />
+                <div className="w-6 h-6 rounded-full bg-slate-800/80" />
+              </div>
+              <div className="space-y-2 text-center py-2">
+                <div className="h-10 w-20 bg-slate-800/90 rounded-lg mx-auto" />
+                <div className="h-3 w-16 bg-slate-800/60 rounded mx-auto" />
+              </div>
+              <div className="space-y-1 pt-2 border-t border-slate-800/50">
+                <div className="h-3.5 w-full bg-slate-800/70 rounded" />
+                <div className="h-3 w-3/4 bg-slate-800/50 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <VocabularyGrid
+          words={filteredWords}
+          onSelectWord={handleCardClick}
+          onPracticeWord={handlePracticeClick}
+        />
+      )}
     </div>
   );
 }

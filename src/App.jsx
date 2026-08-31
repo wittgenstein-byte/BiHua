@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
-import { DictionaryPage } from './pages/DictionaryPage';
-import { BookmarkPage } from './pages/BookmarkPage';
-import { CharacterDetailPage } from './pages/CharacterDetailPage';
+import { PageSkeletonFallback } from './components/PageSkeletonFallback';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
+import { prefetchDictionary } from './hooks/useDictionary';
+
+// Route-level code-splitting with React.lazy
+const DictionaryPage = lazy(() => import('./pages/DictionaryPage'));
+const BookmarkPage = lazy(() => import('./pages/BookmarkPage'));
+const CharacterDetailPage = lazy(() => import('./pages/CharacterDetailPage'));
 
 function PracticeRedirect() {
   const { char } = useParams();
@@ -13,6 +17,11 @@ function PracticeRedirect() {
 
 function AppContent() {
   const { isDark } = useTheme();
+
+  // Idle prefetch dictionary data in the background after main app is loaded
+  useEffect(() => {
+    prefetchDictionary();
+  }, []);
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-rose-500 selection:text-white transition-colors duration-300 ${
@@ -32,19 +41,21 @@ function AppContent() {
       {/* Top Header Navbar */}
       <Navbar />
 
-      {/* Main Content Container with Client-side Routes */}
+      {/* Main Content Container with Client-side Routes & Suspense */}
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 sm:pb-32">
-        <Routes>
-          <Route path="/" element={<Navigate to="/dictionary" replace />} />
-          <Route path="/dictionary" element={<DictionaryPage />} />
-          <Route path="/bookmark" element={<BookmarkPage />} />
-          <Route path="/bookmark/:folderId" element={<BookmarkPage />} />
-          <Route path="/character/:word" element={<CharacterDetailPage />} />
-          <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
-          <Route path="/practice/:char" element={<PracticeRedirect />} />
-          <Route path="/flashcards" element={<Navigate to="/bookmark" replace />} />
-          <Route path="*" element={<Navigate to="/dictionary" replace />} />
-        </Routes>
+        <Suspense fallback={<PageSkeletonFallback />}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dictionary" replace />} />
+            <Route path="/dictionary" element={<DictionaryPage />} />
+            <Route path="/bookmark" element={<BookmarkPage />} />
+            <Route path="/bookmark/:folderId" element={<BookmarkPage />} />
+            <Route path="/character/:word" element={<CharacterDetailPage />} />
+            <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
+            <Route path="/practice/:char" element={<PracticeRedirect />} />
+            <Route path="/flashcards" element={<Navigate to="/bookmark" replace />} />
+            <Route path="*" element={<Navigate to="/dictionary" replace />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );

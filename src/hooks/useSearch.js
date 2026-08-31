@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDictionary } from './useDictionary';
 
 export function useSearch() {
-  const { words } = useDictionary();
+  const { words, loading } = useDictionary();
   const [query, setQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0); // 0 = All
 
@@ -22,10 +22,10 @@ export function useSearch() {
 
       result = result.filter(item => {
         const wordMatch = item.word.includes(q);
-        const pinyinSearchMatch = item.pinyin_search.toLowerCase().includes(cleanQ);
-        const pinyinMatch = item.pinyin.toLowerCase().includes(q);
-        const englishMatch = item.english.toLowerCase().includes(q);
-        const charMatch = item.chars.some(c => c.includes(q));
+        const pinyinSearchMatch = item.pinyin_search?.toLowerCase().includes(cleanQ);
+        const pinyinMatch = item.pinyin?.toLowerCase().includes(q);
+        const englishMatch = item.english?.toLowerCase().includes(q);
+        const charMatch = item.chars?.some(c => c.includes(q));
 
         return wordMatch || pinyinSearchMatch || pinyinMatch || englishMatch || charMatch;
       });
@@ -40,6 +40,9 @@ export function useSearch() {
     selectedLevel,
     setSelectedLevel,
     filteredWords,
+    loading,
     totalResults: filteredWords.length
   };
 }
+
+export default useSearch;
