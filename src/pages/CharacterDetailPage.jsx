@@ -133,7 +133,7 @@ export function CharacterDetailPage() {
       </button>
 
       {/* Main Card */}
-      <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl">
+      <div className="glass-panel p-4 sm:p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-2xl">
 
         {/* Header */}
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -184,29 +184,35 @@ export function CharacterDetailPage() {
         )}
 
         {/* Mode Switcher */}
-        <div className="flex items-center justify-center gap-2 mb-6 bg-slate-100/80 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 w-max mx-auto">
+        <div className="w-full max-w-sm mx-auto flex items-center justify-center gap-1.5 mb-6 bg-slate-100/90 dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
           <button
             onClick={() => setMode('animate')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-              mode === 'animate' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              mode === 'animate'
+                ? 'bg-rose-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Play className="w-4 h-4" /> Animated Stroke Visualizer
+            <Play className="w-4 h-4 shrink-0" />
+            <span className="truncate">Stroke Order</span>
           </button>
           <button
             onClick={() => setMode('practice')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-              mode === 'practice' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+            className={`flex-1 flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              mode === 'practice'
+                ? 'bg-rose-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <PenTool className="w-4 h-4" /> Practice Mode
+            <PenTool className="w-4 h-4 shrink-0" />
+            <span className="truncate">Practice Mode</span>
           </button>
         </div>
 
         {/* Tianzige Canvas */}
-        <div className="flex flex-col items-center justify-center my-4">
-          <div className="tianzige-grid w-[300px] h-[300px] flex items-center justify-center relative rounded-3xl shadow-inner">
-            <div ref={containerRef} className="w-[300px] h-[300px]" />
+        <div className="flex flex-col items-center justify-center my-2">
+          <div className="tianzige-grid w-[260px] h-[260px] sm:w-[300px] sm:h-[300px] flex items-center justify-center relative rounded-3xl shadow-inner overflow-hidden">
+            <div ref={containerRef} className="w-[260px] h-[260px] sm:w-[300px] sm:h-[300px]" />
           </div>
         </div>
 
@@ -279,7 +285,7 @@ export function CharacterDetailPage() {
                   <CheckCircle className="w-6 h-6" /> Character Completed!
                 </div>
                 <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                  Accuracy Score: <strong className="text-slate-900 dark:text-white text-base font-black">{score}/100</strong> ({mistakes} mistakes)
+                  Score: <strong className="text-slate-900 dark:text-white text-base font-black">{score}/100</strong> ({mistakes} mistakes)
                 </div>
                 <button
                   onClick={() => { setIsCompleted(false); setMistakes(0); setScore(null); writerRef.current?.quiz(); }}

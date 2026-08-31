@@ -6,12 +6,14 @@ const DEFAULT_DECKS = [
   {
     id: 'deck_hsk1',
     name: 'HSK 1 Basics',
+    description: 'Foundational vocabulary for daily conversation',
     color: '#e11d48',
     words: ['你好', '谢谢', '学习', '苹果']
   },
   {
     id: 'deck_daily',
     name: 'Daily Phrases',
+    description: 'Useful everyday phrases and expressions',
     color: '#0284c7',
     words: ['快乐', '白天', '吃饭', '帮忙']
   }
@@ -61,11 +63,12 @@ export function useDecks() {
     }
   };
 
-  const createDeck = useCallback(({ name, color = '#e11d48', words = [] }) => {
+  const createDeck = useCallback(({ name, description = '', color = '#e11d48', words = [] }) => {
     const current = getSavedDecks();
     const newDeck = {
       id: `deck_${Date.now()}`,
-      name: name.trim() || 'New Stack Deck',
+      name: name.trim() || 'New Folder Deck',
+      description: description.trim(),
       color,
       words: Array.from(new Set(words)),
       createdAt: new Date().toISOString()
@@ -95,11 +98,41 @@ export function useDecks() {
     saveDecks(updated);
   }, []);
 
+  const addWordsToDeck = useCallback((deckId, wordsToAdd) => {
+    const current = getSavedDecks();
+    const updated = current.map(d => {
+      if (d.id === deckId) {
+        return {
+          ...d,
+          words: Array.from(new Set([...d.words, ...wordsToAdd]))
+        };
+      }
+      return d;
+    });
+    saveDecks(updated);
+  }, []);
+
+  const removeWordFromDeck = useCallback((deckId, wordToRemove) => {
+    const current = getSavedDecks();
+    const updated = current.map(d => {
+      if (d.id === deckId) {
+        return {
+          ...d,
+          words: d.words.filter(w => w !== wordToRemove)
+        };
+      }
+      return d;
+    });
+    saveDecks(updated);
+  }, []);
+
   return {
     decks,
     createDeck,
     updateDeck,
-    deleteDeck
+    deleteDeck,
+    addWordsToDeck,
+    removeWordFromDeck
   };
 }
 

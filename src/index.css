@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --folder-tab-bg: #ffffff;
+}
+
+.dark {
+  --folder-tab-bg: #1e293b;
+}
+
 @layer utilities {
   /* Traditional Tianzige (田字格) Grid Overlay */
   .tianzige-grid {

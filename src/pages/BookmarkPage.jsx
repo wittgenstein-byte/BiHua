@@ -1,71 +1,113 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Bookmark, Sparkles, Trash2, Layers, LayoutGrid, Plus, Edit3, Zap, Flame, Trophy } from 'lucide-react';
+import {
+  Bookmark,
+  Folder,
+  ChevronRight,
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Edit3,
+  Zap,
+  Flame,
+  Volume2,
+  PenTool,
+  X,
+  Search,
+  Sparkles,
+  Layers,
+  CheckCircle2
+} from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useDictionary } from '../hooks/useDictionary';
 import { useDecks } from '../hooks/useDecks';
-import { SearchBar } from '../components/SearchBar';
-import { VocabularyGrid } from '../components/VocabularyGrid';
-import { StackDeckModal } from '../components/deck/StackDeckModal';
-import AntigravityStackGallery from '../components/deck/AntigravityStackGallery';
+import { FolderCard } from '../components/folder/FolderCard';
+import { NewFolderCard } from '../components/folder/NewFolderCard';
+import { FolderModal } from '../components/folder/FolderModal';
+import { AddWordsToFolderModal } from '../components/folder/AddWordsToFolderModal';
 import { WordSnapChallengeModal } from '../components/challenge/WordSnapChallengeModal';
-import { useNavigate } from 'react-router-dom';
+import { SearchBar } from '../components/SearchBar';
 
 export function BookmarkPage() {
-  const { bookmarks, clearBookmarks, totalBookmarks } = useBookmarks();
+  const { bookmarks, clearBookmarks, totalBookmarks, toggleBookmark, isBookmarked } = useBookmarks();
   const { words } = useDictionary();
-  const { decks, createDeck, updateDeck, deleteDeck } = useDecks();
+  const { decks, createDeck, updateDeck, deleteDeck, removeWordFromDeck, addWordsToDeck } = useDecks();
   const navigate = useNavigate();
 
-  const [activeDeckIndex, setActiveDeckIndex] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingDeck, setEditingDeck] = useState(null);
-  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
+  // URL-driven activeFolderId: /bookmark/:folderId or /bookmark?folder=:id
+  const { folderId: routeFolderId } = useParams();
+  const [searchParams] = useSearchParams();
+  const queryFolderId = searchParams.get('folder');
+  const activeFolderId = routeFolderId || queryFolderId || null;
 
+  // Modals
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [editingFolder, setEditingFolder] = useState(null);
+
+  const [isAddWordsModalOpen, setIsAddWordsModalOpen] = useState(false);
+  const [targetFolderForWords, setTargetFolderForWords] = useState(null);
+
+  const [isChallengeOpen, setIsChallengeOpen] = useState(false);
+  const [challengeTitle, setChallengeTitle] = useState('Challenge Deck');
+  const [challengeColor, setChallengeColor] = useState('#e11d48');
+  const [challengeWords, setChallengeWords] = useState([]);
+
+  // Search & Filter inside Explorer
   const [query, setQuery] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(0);
-  const [viewMode, setViewMode] = useState('stack');
 
-  // Bookmarked dictionary words
-  const bookmarkedWords = useMemo(() => {
+  // All bookmarked dictionary words
+  const allBookmarkedWords = useMemo(() => {
     const bookmarkSet = new Set(bookmarks);
     return words.filter(w => bookmarkSet.has(w.word));
   }, [words, bookmarks]);
 
-  // Combine master deck + custom user decks
-  const allDecks = useMemo(() => {
-    const masterDeck = {
-      id: 'all',
-      name: 'คำศัพท์ทั้งหมด (All Saved)',
-      color: '#e11d48',
-      words: bookmarkedWords.map(w => w.word)
-    };
-    return [masterDeck, ...decks];
-  }, [bookmarkedWords, decks]);
+  // Master system folder
+  const masterFolder = useMemo(() => ({
+    id: 'all',
+    name: 'คำศัพท์ทั้งหมด (All Saved)',
+    description: 'System master folder containing all saved bookmarks',
+    color: '#e11d48',
+    isMaster: true,
+    words: allBookmarkedWords.map(w => w.word)
+  }), [allBookmarkedWords]);
 
-  // Ensure activeDeckIndex remains within bounds
+  // Combined list of folders
+  const allFolders = useMemo(() => {
+    return [masterFolder, ...decks];
+  }, [masterFolder, decks]);
+
+  // Fallback check: If URL points to a non-existent folder, automatically redirect back to /bookmark root
   useEffect(() => {
-    if (activeDeckIndex >= allDecks.length) {
-      setActiveDeckIndex(Math.max(0, allDecks.length - 1));
+    if (!activeFolderId) return;
+    const folderExists = allFolders.some(f => f.id === activeFolderId);
+    if (!folderExists) {
+      // Automatic fallback for deleted or non-existent custom folders
+      navigate('/bookmark', { replace: true });
     }
-  }, [allDecks.length, activeDeckIndex]);
+  }, [activeFolderId, allFolders, navigate]);
 
-  const activeDeck = allDecks[activeDeckIndex] || allDecks[0];
+  // Currently opened folder (if any)
+  const currentFolder = useMemo(() => {
+    if (!activeFolderId) return null;
+    return allFolders.find(f => f.id === activeFolderId) || null;
+  }, [activeFolderId, allFolders]);
 
-  // Words inside active deck
-  const activeDeckWords = useMemo(() => {
-    if (!activeDeck) return bookmarkedWords;
-    if (activeDeck.id === 'all') return bookmarkedWords;
-    const wordSet = new Set(activeDeck.words);
-    return bookmarkedWords.filter(w => wordSet.has(w.word));
-  }, [activeDeck, bookmarkedWords]);
+  // Words inside currently opened folder
+  const currentFolderWords = useMemo(() => {
+    if (!currentFolder) return [];
+    if (currentFolder.id === 'all') return allBookmarkedWords;
+    const wordSet = new Set(currentFolder.words || []);
+    return allBookmarkedWords.filter(w => wordSet.has(w.word));
+  }, [currentFolder, allBookmarkedWords]);
 
-  // Filter active deck words by search & HSK level filter
-  const filteredWords = useMemo(() => {
+  // Filtered words for search inside folder explorer
+  const filteredFolderWords = useMemo(() => {
     const lvlNum = Number(selectedLevel);
     const q = query.trim().toLowerCase();
     const cleanQ = q.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    return activeDeckWords.filter(item => {
+    return currentFolderWords.filter(item => {
       const matchesLevel = lvlNum === 0 || isNaN(lvlNum) || item.level === lvlNum;
       if (!matchesLevel) return false;
       if (!q) return true;
@@ -78,97 +120,164 @@ export function BookmarkPage() {
 
       return wordMatch || pinyinSearchMatch || pinyinMatch || englishMatch || charMatch;
     });
-  }, [activeDeckWords, query, selectedLevel]);
+  }, [currentFolderWords, query, selectedLevel]);
 
-  const handleOpenCreateModal = () => {
-    setEditingDeck(null);
-    setIsModalOpen(true);
+  // Speech Pronunciation
+  const speakWord = (e, text) => {
+    e.stopPropagation();
+    if (!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'zh-CN';
+    utterance.rate = 0.85;
+    window.speechSynthesis.speak(utterance);
   };
 
-  const handleOpenEditModal = (deckObj) => {
-    setEditingDeck(deckObj);
-    setIsModalOpen(true);
-  };
-
-  const handleDeleteDeck = (deckObj) => {
-    if (window.confirm(`Are you sure you want to delete deck "${deckObj.name}"? (Saved words will remain in bookmarks)`)) {
-      deleteDeck(deckObj.id);
-      setActiveDeckIndex(0);
+  // Folder Navigation Helper
+  const handleOpenFolder = (folderId) => {
+    if (!folderId) {
+      navigate('/bookmark');
+    } else {
+      navigate(`/bookmark/${encodeURIComponent(folderId)}`);
     }
   };
 
-  const handleSaveModalDeck = (deckData) => {
-    if (editingDeck) {
-      updateDeck(editingDeck.id, deckData);
+  // Folder CRUD Handlers
+  const handleOpenCreateFolder = () => {
+    setEditingFolder(null);
+    setIsFolderModalOpen(true);
+  };
+
+  const handleOpenEditFolder = (folderObj) => {
+    setEditingFolder(folderObj);
+    setIsFolderModalOpen(true);
+  };
+
+  const handleSaveFolder = (folderData) => {
+    if (editingFolder) {
+      updateDeck(editingFolder.id, folderData);
     } else {
-      const created = createDeck(deckData);
+      const created = createDeck(folderData);
       if (created) {
-        setActiveDeckIndex(allDecks.length);
+        navigate(`/bookmark/${encodeURIComponent(created.id)}`);
       }
     }
   };
 
-  const handleCardClick = (word) => {
-    navigate(`/character/${encodeURIComponent(word.word)}`);
+  const handleDeleteFolder = (folderObj) => {
+    if (window.confirm(`Are you sure you want to delete folder "${folderObj.name}"? (Your saved words will remain safely in Bookmarks)`)) {
+      deleteDeck(folderObj.id);
+      if (activeFolderId === folderObj.id) {
+        navigate('/bookmark', { replace: true });
+      }
+    }
   };
 
-  const handlePracticeClick = (word) => {
-    navigate(`/character/${encodeURIComponent(word.word)}?mode=practice`);
+  // Launch WordSnap challenge for a specific folder
+  const handleLaunchChallenge = (folderObj) => {
+    let targetWords = [];
+    if (folderObj.id === 'all') {
+      targetWords = allBookmarkedWords;
+    } else {
+      const wordSet = new Set(folderObj.words || []);
+      targetWords = allBookmarkedWords.filter(w => wordSet.has(w.word));
+    }
+
+    if (targetWords.length === 0) {
+      alert('This folder has no words to practice yet! Add some words first.');
+      return;
+    }
+
+    setChallengeTitle(folderObj.name);
+    setChallengeColor(folderObj.color || '#e11d48');
+    setChallengeWords(targetWords);
+    setIsChallengeOpen(true);
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
-      {/* Top Header Bar */}
+    <div className="space-y-8 max-w-5xl mx-auto pb-16">
+      
+      {/* ──── TOP NAVIGATION & BREADCRUMBS ──── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 flex items-center justify-center text-amber-500 shadow-sm">
-            <Bookmark className="w-5 h-5 fill-amber-500" />
+          <div className="w-11 h-11 rounded-2xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shadow-sm shrink-0">
+            <Folder className="w-5 h-5 fill-rose-500/30" />
           </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white font-chinese">
-              Saved 3D Flashcard Decks ({totalBookmarks})
+
+          <div className="min-w-0">
+            {/* Breadcrumb path */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mb-0.5">
+              <button
+                onClick={() => handleOpenFolder(null)}
+                className={`hover:text-rose-500 transition-colors flex items-center gap-1 ${
+                  !activeFolderId ? 'text-slate-900 dark:text-white font-extrabold' : ''
+                }`}
+              >
+                Folders
+              </button>
+
+              {currentFolder && (
+                <>
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-slate-900 dark:text-white font-extrabold truncate max-w-[200px]">
+                    {currentFolder.name}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white font-chinese leading-tight">
+              {currentFolder ? currentFolder.name : `Vocabulary Folders (${allFolders.length})`}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              3D Circular Stack Gallery, Practice & WordSnap Challenge Sprint
-            </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Global Header Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg shadow-rose-600/30 transition-all hover:scale-105 active:scale-95"
-          >
-            <Plus className="w-4 h-4" /> New Stack Deck
-          </button>
+          {!activeFolderId ? (
+            <>
+              <button
+                onClick={handleOpenCreateFolder}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black shadow-lg shadow-rose-600/30 transition-all hover:scale-105 active:scale-95"
+              >
+                <Plus className="w-4 h-4" /> New Folder
+              </button>
 
-          {totalBookmarks > 0 && (
+              {totalBookmarks > 0 && (
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to remove all bookmarked words?')) {
+                      clearBookmarks();
+                    }
+                  }}
+                  className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200/80 dark:border-slate-800 text-xs font-bold transition-colors shadow-sm"
+                  title="Clear All Bookmarks"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          ) : (
             <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to remove all bookmarked characters?')) {
-                  clearBookmarks();
-                }
-              }}
-              className="p-2.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-300 border border-slate-200/80 dark:border-slate-800 text-xs font-bold transition-colors shadow-sm"
-              title="Clear All Bookmarks"
+              onClick={() => handleOpenFolder(null)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all"
             >
-              <Trash2 className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4" /> Back to All Folders
             </button>
           )}
         </div>
       </div>
 
       {totalBookmarks === 0 ? (
-        /* Empty State */
+        /* ──── EMPTY STATE: NO SAVED WORDS ──── */
         <div className="w-full py-16 text-center glass-card rounded-3xl border border-slate-200/80 dark:border-slate-800 space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
+          <div className="w-16 h-16 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500">
             <Bookmark className="w-8 h-8" />
           </div>
           <div className="space-y-1 max-w-md mx-auto px-4">
             <h3 className="text-xl font-bold text-slate-900 dark:text-white">No Bookmarks Saved Yet</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-              Click the bookmark icon on any vocabulary card or character page to save items and review them in 3D Flashcards & WordSnap Challenge.
+              Click the bookmark icon on any vocabulary card or character page to save items into your study folders.
             </p>
           </div>
           <button
@@ -178,147 +287,282 @@ export function BookmarkPage() {
             <Sparkles className="w-4 h-4" /> Explore Dictionary
           </button>
         </div>
-      ) : (
+      ) : !activeFolderId ? (
+        /* ──── VIEW 1: FOLDER DECK GALLERY (ROOT FILE SYSTEM) ──── */
         <div className="space-y-6">
+          {/* Folder Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            
+            {/* Master All Bookmarks Folder */}
+            <FolderCard
+              folder={masterFolder}
+              previewWords={allBookmarkedWords.slice(0, 3)}
+              wordsCount={allBookmarkedWords.length}
+              xpEarned={allBookmarkedWords.length * 60}
+              lastPracticed="Today"
+              isMaster={true}
+              onClick={() => handleOpenFolder('all')}
+              onPlay={() => handleLaunchChallenge(masterFolder)}
+            />
+
+            {/* Custom Folders */}
+            {decks.map((folder) => {
+              const folderWords = allBookmarkedWords.filter(w => (folder.words || []).includes(w.word));
+              const count = folderWords.length;
+              return (
+                <FolderCard
+                  key={folder.id}
+                  folder={folder}
+                  previewWords={folderWords.slice(0, 3)}
+                  wordsCount={count}
+                  xpEarned={count * 50}
+                  lastPracticed="Recently"
+                  isMaster={false}
+                  onClick={() => handleOpenFolder(folder.id)}
+                  onEdit={() => handleOpenEditFolder(folder)}
+                  onDelete={() => handleDeleteFolder(folder)}
+                  onPlay={() => handleLaunchChallenge(folder)}
+                />
+              );
+            })}
+
+            {/* + New Folder Card */}
+            <NewFolderCard onClick={handleOpenCreateFolder} />
+
+          </div>
+        </div>
+      ) : (
+        /* ──── VIEW 2: FOLDER EXPLORER (INSIDE OPENED FOLDER) ──── */
+        <div className="space-y-6 animate-fade-in">
           
-          {/* WORDSNAP CHALLENGE MODE HERO BANNER */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 p-6 sm:p-7 text-white shadow-xl shadow-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative z-10 space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-[11px] font-black tracking-wider uppercase border border-white/30 shadow-sm">
-                <Flame className="w-3.5 h-3.5 fill-current animate-bounce" /> WordSnap Challenge Sprint
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white font-chinese">
-                {activeDeck.name} Challenge
-              </h2>
-              <p className="text-xs sm:text-sm text-rose-100 font-medium max-w-lg">
-                Swipe cards to test your memory, build combo streaks 🔥, beat the sprint clock, and track your accuracy stats!
-              </p>
-            </div>
-
-            <div className="relative z-10 flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setIsChallengeOpen(true)}
-                disabled={activeDeckWords.length === 0}
-                className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 font-black text-sm shadow-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Zap className="w-4 h-4 fill-amber-500 text-amber-500" />
-                <span>Start Challenge ({activeDeckWords.length})</span>
-              </button>
-            </div>
-          </div>
-
-          {/* ACTIVE DECK BAR & CONTROLS */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-slate-900/80 p-4 rounded-3xl border border-slate-200/90 dark:border-slate-800 shadow-md">
-            <div className="flex items-center gap-2.5">
-              <span
-                className="w-4 h-4 rounded-full shrink-0 shadow-md"
-                style={{ backgroundColor: activeDeck.color }}
-              />
-              <div>
-                <h2 className="text-lg font-black text-slate-900 dark:text-white font-chinese leading-snug">
-                  {activeDeck.name}
-                </h2>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  {filteredWords.length} cards in this deck • Tap center deck to view
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* View Mode Toggle: 3D Stack vs Grid */}
-              <div className="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-                <button
-                  onClick={() => setViewMode('stack')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    viewMode === 'stack'
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+          {/* Folder Hero Header Banner */}
+          <div
+            className="relative overflow-hidden rounded-3xl p-6 sm:p-7 border transition-all"
+            style={{
+              backgroundColor: `${currentFolder.color}0a`,
+              borderColor: `${currentFolder.color}35`,
+            }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              
+              {/* Folder Details */}
+              <div className="flex items-start gap-3.5">
+                <div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-md"
+                  style={{
+                    backgroundColor: `${currentFolder.color}20`,
+                    color: currentFolder.color,
+                    border: `1px solid ${currentFolder.color}40`
+                  }}
                 >
-                  <Layers className="w-3.5 h-3.5" /> 3D Stage
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    viewMode === 'grid'
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <LayoutGrid className="w-3.5 h-3.5" /> Grid View
-                </button>
-              </div>
-
-              {/* Edit/Delete Buttons for Custom Deck */}
-              {activeDeck.id !== 'all' && (
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleOpenEditModal(activeDeck)}
-                    className="flex items-center gap-1 px-3 py-2 rounded-2xl bg-slate-100 dark:bg-slate-950 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 text-xs font-bold transition-colors"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-rose-500" /> Edit Deck
-                  </button>
-                  <button
-                    onClick={() => handleDeleteDeck(activeDeck)}
-                    className="p-2 rounded-2xl bg-slate-100 dark:bg-slate-950 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-800 transition-colors"
-                    title="Delete Deck"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <Folder className="w-7 h-7 fill-current" />
                 </div>
-              )}
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white font-chinese">
+                      {currentFolder.name}
+                    </h2>
+                    <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shadow-sm">
+                      {currentFolderWords.length} Words
+                    </span>
+                  </div>
+
+                  {currentFolder.description && (
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+                      {currentFolder.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Folder Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                
+                {/* Start WordSnap Challenge */}
+                <button
+                  onClick={() => handleLaunchChallenge(currentFolder)}
+                  disabled={currentFolderWords.length === 0}
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-lg shadow-rose-600/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Zap className="w-4 h-4 fill-white" />
+                  <span>Start Challenge ({currentFolderWords.length})</span>
+                </button>
+
+                {/* Manage Words in Folder (for custom folders) */}
+                {!currentFolder.isMaster && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setTargetFolderForWords(currentFolder);
+                        setIsAddWordsModalOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700 font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95"
+                    >
+                      <Plus className="w-4 h-4 text-rose-500" /> Manage Words
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenEditFolder(currentFolder)}
+                      className="p-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+                      title="Edit Folder"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteFolder(currentFolder)}
+                      className="p-3 rounded-2xl bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+                      title="Delete Folder"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
+
             </div>
           </div>
 
-          {/* Search & Level Filter Bar */}
+          {/* Search & HSK Level Filter */}
           <SearchBar
             query={query}
             setQuery={setQuery}
             selectedLevel={selectedLevel}
             setSelectedLevel={setSelectedLevel}
-            totalResults={filteredWords.length}
+            totalResults={filteredFolderWords.length}
           />
 
-          {/* ANTIGRAVITY STACK GALLERY / GRID VIEW */}
-          {viewMode === 'stack' ? (
-            <AntigravityStackGallery
-              allDecks={allDecks}
-              activeDeckIndex={activeDeckIndex}
-              onActiveIndexChange={(idx) => setActiveDeckIndex(idx)}
-              bookmarkedWords={bookmarkedWords}
-            />
-          ) : filteredWords.length === 0 ? (
-            <div className="w-full py-16 text-center glass-card rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <p className="text-slate-500 dark:text-slate-400 font-medium">No words in this deck match your search or level filter.</p>
+          {/* Words Grid inside Folder */}
+          {filteredFolderWords.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredFolderWords.map((w) => (
+                <div
+                  key={w.word}
+                  className="group relative rounded-3xl bg-white dark:bg-slate-800/80 border border-slate-200/90 dark:border-slate-700/80 p-5 shadow-sm hover:shadow-md hover:border-rose-300 dark:hover:border-rose-500/40 transition-all flex flex-col justify-between"
+                >
+                  {/* Top Bar: HSK Tag + Audio + Remove from folder */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-500/20">
+                      HSK {w.level || 1}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => speakWord(e, w.word)}
+                        className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-600 hover:text-rose-600 dark:text-slate-300 dark:hover:text-rose-400 flex items-center justify-center transition-colors shadow-sm"
+                        title="Listen Pronunciation"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Remove from custom folder */}
+                      {!currentFolder.isMaster && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeWordFromDeck(currentFolder.id, w.word);
+                          }}
+                          className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700/60 hover:bg-rose-50 dark:hover:bg-rose-500/20 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-colors shadow-sm"
+                          title="Remove from this folder"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Body: Hanzi + Pinyin + Meaning */}
+                  <div
+                    onClick={() => navigate(`/character/${encodeURIComponent(w.word)}`)}
+                    className="cursor-pointer space-y-1 mb-4"
+                  >
+                    <h3 className="font-chinese text-3xl font-extrabold text-slate-900 dark:text-white group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                      {w.word}
+                    </h3>
+                    <p className="text-sm font-bold text-rose-500 dark:text-rose-400">
+                      {w.pinyin}
+                    </p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium line-clamp-2 leading-relaxed">
+                      {w.english}
+                    </p>
+                  </div>
+
+                  {/* Footer: Stroke Practice Link */}
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
+                    <button
+                      onClick={() => navigate(`/character/${encodeURIComponent(w.word)}?mode=practice`)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline"
+                    >
+                      <PenTool className="w-3.5 h-3.5" /> Practice Stroke
+                    </button>
+
+                    <button
+                      onClick={() => navigate(`/character/${encodeURIComponent(w.word)}`)}
+                      className="text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      View Details →
+                    </button>
+                  </div>
+
+                </div>
+              ))}
             </div>
           ) : (
-            <VocabularyGrid
-              words={filteredWords}
-              onSelectWord={handleCardClick}
-              onPracticeWord={handlePracticeClick}
-            />
+            /* Empty folder content */
+            <div className="w-full py-16 text-center glass-card rounded-3xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+                No words in this folder match your search or filter.
+              </p>
+              {!currentFolder.isMaster && (
+                <button
+                  onClick={() => {
+                    setTargetFolderForWords(currentFolder);
+                    setIsAddWordsModalOpen(true);
+                  }}
+                  className="px-4 py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 transition-all inline-flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Add Bookmarked Words
+                </button>
+              )}
+            </div>
           )}
 
         </div>
       )}
 
-      {/* WordSnap Challenge Mode Modal */}
+      {/* ──── MODALS ──── */}
+
+      {/* 1. Create / Edit Folder Modal */}
+      <FolderModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        onSave={handleSaveFolder}
+        initialFolder={editingFolder}
+      />
+
+      {/* 2. Add / Manage Words in Folder Modal */}
+      <AddWordsToFolderModal
+        isOpen={isAddWordsModalOpen}
+        onClose={() => setIsAddWordsModalOpen(false)}
+        folder={targetFolderForWords}
+        allBookmarkedWords={allBookmarkedWords}
+        onSaveWords={(wordsArray) => {
+          if (targetFolderForWords) {
+            updateDeck(targetFolderForWords.id, { words: wordsArray });
+          }
+        }}
+      />
+
+      {/* 3. WordSnap Challenge Mode Modal */}
       <WordSnapChallengeModal
         isOpen={isChallengeOpen}
         onClose={() => setIsChallengeOpen(false)}
-        deckTitle={activeDeck.name}
-        deckColor={activeDeck.color}
-        words={activeDeckWords}
+        deckTitle={challengeTitle}
+        deckColor={challengeColor}
+        words={challengeWords}
       />
 
-      {/* Create / Edit Stack Deck Modal */}
-      <StackDeckModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveModalDeck}
-        editingDeck={editingDeck}
-        allBookmarkedWords={bookmarkedWords}
-      />
     </div>
   );
 }

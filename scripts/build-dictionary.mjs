@@ -8,9 +8,25 @@ const rootDir = path.resolve(__dirname, '..');
 
 const inputPath = path.join(rootDir, 'public', 'data', 'hsk_master_dictionary.json');
 const outputDir = path.join(rootDir, 'src', 'data');
+const wordsOutputPath = path.join(outputDir, 'hsk-words.json');
+const charsOutputPath = path.join(outputDir, 'hsk-chars.json');
 
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
+}
+
+// If both output files exist and are non-empty, skip regeneration if up-to-date
+if (fs.existsSync(wordsOutputPath) && fs.existsSync(charsOutputPath)) {
+  try {
+    const inputStat = fs.statSync(inputPath);
+    const wordsStat = fs.statSync(wordsOutputPath);
+    if (wordsStat.mtimeMs >= inputStat.mtimeMs && wordsStat.size > 10000) {
+      console.log('Dictionary data is already up-to-date. Skipping rebuild.');
+      process.exit(0);
+    }
+  } catch (e) {
+    // Continue with rebuild
+  }
 }
 
 console.log('Reading master dictionary from:', inputPath);
@@ -40,7 +56,7 @@ wordsData.forEach((entry, index) => {
 
   // Cross-reference characters
   const chars = wordObj.chars;
-  chars.forEach((ch, charIdx) => {
+  chars.forEach((ch) => {
     if (!ch) return;
     if (!charMap.has(ch)) {
       charMap.set(ch, {
@@ -50,7 +66,6 @@ wordsData.forEach((entry, index) => {
       });
     }
     const charEntry = charMap.get(ch);
-    // Check if word is already added
     if (!charEntry.appearsIn.some(w => w.word === wordObj.word)) {
       charEntry.appearsIn.push({
         word: wordObj.word,
@@ -64,11 +79,20 @@ wordsData.forEach((entry, index) => {
 
 const charsList = Array.from(charMap.values());
 
-const wordsOutputPath = path.join(outputDir, 'hsk-words.json');
-const charsOutputPath = path.join(outputDir, 'hsk-chars.json');
+function safeWrite(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, data, 'utf8');
+  } catch (err) {
+    console.warn(`Write retry for ${filePath}:`, err.message);
+    // Write via temporary file
+    const tmpPath = `${filePath}.tmp`;
+    fs.writeFileSync(tmpPath, data, 'utf8');
+    fs.renameSync(tmpPath, filePath);
+  }
+}
 
-fs.writeFileSync(wordsOutputPath, JSON.stringify(wordsList, null, 2));
-fs.writeFileSync(charsOutputPath, JSON.stringify(charsList, null, 2));
+safeWrite(wordsOutputPath, JSON.stringify(wordsList, null, 2));
+safeWrite(charsOutputPath, JSON.stringify(charsList, null, 2));
 
 console.log(`Successfully generated:`);
 console.log(` - ${wordsOutputPath} (${wordsList.length} words)`);

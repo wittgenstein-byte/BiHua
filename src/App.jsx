@@ -33,11 +33,12 @@ function AppContent() {
       <Navbar />
 
       {/* Main Content Container with Client-side Routes */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-24 sm:pb-28">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 sm:pb-32">
         <Routes>
           <Route path="/" element={<Navigate to="/dictionary" replace />} />
           <Route path="/dictionary" element={<DictionaryPage />} />
           <Route path="/bookmark" element={<BookmarkPage />} />
+          <Route path="/bookmark/:folderId" element={<BookmarkPage />} />
           <Route path="/character/:word" element={<CharacterDetailPage />} />
           <Route path="/practice" element={<Navigate to="/dictionary" replace />} />
           <Route path="/practice/:char" element={<PracticeRedirect />} />
@@ -45,18 +46,6 @@ function AppContent() {
           <Route path="*" element={<Navigate to="/dictionary" replace />} />
         </Routes>
       </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 w-full border-t border-slate-200/80 dark:border-slate-900 py-6 text-center text-xs text-slate-500 glass-panel mt-auto mb-20 sm:mb-24">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="font-chinese font-bold text-slate-900 dark:text-slate-300">BiHua (筆畫)</span> — HSK 1-6 Chinese Character Learning
-          </div>
-          <div>
-            1,800 Characters • 5,456 Vocabulary Entries • WordSnap Challenge
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }

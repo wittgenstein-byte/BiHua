@@ -11,6 +11,7 @@
     "build:data": "node scripts/build-dictionary.mjs && node scripts/check-stroke-coverage.mjs"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "hanzi-writer": "^3.5.0",
     "lucide-react": "^0.344.0",
     "motion": "^12.42.2",
