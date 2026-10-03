@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server:dev": "wrangler dev --port 8787",
     "build": "node scripts/build-dictionary.mjs && vite build",
     "preview": "vite preview",
     "check:coverage": "node scripts/check-stroke-coverage.mjs",
-    "build:data": "node scripts/build-dictionary.mjs && node scripts/check-stroke-coverage.mjs"
+    "build:data": "node scripts/build-dictionary.mjs && node scripts/check-stroke-coverage.mjs",
+    "db:migrate:local": "wrangler d1 execute bihua-db --local --file=server/db/schema.sql",
+    "db:migrate:remote": "wrangler d1 execute bihua-db --remote --file=server/db/schema.sql",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
     "hanzi-writer": "^3.5.0",
+    "hono": "^4.13.12",
     "lucide-react": "^0.344.0",
     "motion": "^12.42.2",
     "react": "^18.2.0",
@@ -26,6 +31,7 @@
     "sharp": "^0.35.5",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.4",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "wrangler": "^4.147.0"
   }
 }

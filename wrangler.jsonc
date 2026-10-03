@@ -1,0 +1,23 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bihua",
+	"main": "server/index.js",
+	"compatibility_date": "2024-09-23",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "bihua-db",
+			"database_id": "d1ca2e11-ff7d-48ab-9413-1710a4b7ebd2"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "production"
+	}
+}
