@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { BookOpen, Bookmark, Sparkles, Sun, Moon } from 'lucide-react';
+import { BookOpen, Bookmark, Sparkles, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
 import { useBookmarks } from '../hooks/useBookmarks';
 import { useTheme } from '../hooks/useTheme';
+import { OfflineManagerModal } from './OfflineManagerModal';
 
 export function Navbar() {
   const { totalBookmarks } = useBookmarks();
   const { isDark, toggleTheme } = useTheme();
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
 
   return (
     <>
@@ -34,8 +36,18 @@ export function Navbar() {
               </div>
             </Link>
 
-            {/* Right Controls: Stats & Theme Switcher */}
+            {/* Right Controls: Stats & Offline & Theme Switcher */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Offline Cache & Mode Button */}
+              <button
+                onClick={() => setShowOfflineModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-rose-400/50 hover:text-rose-600 dark:hover:text-rose-400 shadow-sm transition-all"
+                title="จัดการแคชและโหมดออฟไลน์ (Offline Mode)"
+              >
+                <Cloud className="w-3.5 h-3.5 text-rose-500" />
+                <span className="hidden sm:inline">Offline</span>
+              </button>
+
               {/* Quick Stats Pill */}
               <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -60,6 +72,12 @@ export function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* Offline Modal */}
+      <OfflineManagerModal
+        isOpen={showOfflineModal}
+        onClose={() => setShowOfflineModal(false)}
+      />
 
       {/* Mobile-First Bottom Navigation Bar / Floating Dock */}
       <nav className="fixed bottom-0 inset-x-0 z-50 px-3 py-2 sm:py-3 pointer-events-none">

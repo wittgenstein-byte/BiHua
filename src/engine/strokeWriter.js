@@ -22,13 +22,28 @@ export function createStrokeWriter(targetEl, char, options = {}) {
     showCharacter: false,
     highlightColor: '#22c55e',   // Green highlight on stroke success
     charDataLoader: (character, onComplete, onError) => {
-      fetch(`/stroke/${encodeURIComponent(character)}.json`)
+      const url = `/stroke/${encodeURIComponent(character)}.json`;
+      fetch(url)
         .then(res => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
         })
         .then(data => onComplete(data))
-        .catch(err => {
+        .catch(async (err) => {
+          // Attempt offline cache fallback if standard fetch failed
+          if ('caches' in window) {
+            try {
+              const cache = await caches.open('bihua-stroke-cache');
+              const cachedRes = await cache.match(url);
+              if (cachedRes) {
+                const data = await cachedRes.json();
+                onComplete(data);
+                return;
+              }
+            } catch (cacheErr) {
+              console.warn('Cache lookup fallback error:', cacheErr);
+            }
+          }
           console.error(`Failed to load stroke file for ${character}:`, err);
           if (onError) onError(err);
         });

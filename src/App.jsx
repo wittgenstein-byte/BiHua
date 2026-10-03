@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
+import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { PageSkeletonFallback } from './components/PageSkeletonFallback';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
@@ -46,6 +47,9 @@ function AppContent() {
 
       {/* Top Header Navbar (Hidden in full-screen Challenge mode) */}
       {!isChallengeRoute && <Navbar />}
+
+      {/* PWA Add to Home Screen Prompt */}
+      {!isChallengeRoute && <InstallPwaPrompt />}
 
       {/* Main Content Container with Client-side Routes & Suspense */}
       <main className={`relative z-10 flex-1 w-full mx-auto ${
