@@ -5,6 +5,7 @@ import { InstallPwaPrompt } from './components/InstallPwaPrompt';
 import { PageSkeletonFallback } from './components/PageSkeletonFallback';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ThemeProvider, useTheme } from './hooks/useTheme';
+import { AuthProvider } from './hooks/useAuth';
 import { prefetchDictionary } from './hooks/useDictionary';
 
 // Route-level code-splitting with React.lazy
@@ -80,9 +81,11 @@ export function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

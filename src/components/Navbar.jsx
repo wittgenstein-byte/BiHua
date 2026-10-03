@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { BookOpen, Bookmark, Sparkles, Sun, Moon, Cloud, CloudOff } from 'lucide-react';
+import { BookOpen, Bookmark, Sparkles, Sun, Moon, Cloud, User, LogOut, LogIn } from 'lucide-react';
 import { useBookmarks } from '../hooks/useBookmarks';
+import { useDecks } from '../hooks/useDecks';
 import { useTheme } from '../hooks/useTheme';
+import { useAuth } from '../hooks/useAuth';
 import { OfflineManagerModal } from './OfflineManagerModal';
+import { AuthModal } from './AuthModal';
 
 export function Navbar() {
-  const { totalBookmarks } = useBookmarks();
+  const { totalBookmarks, isSyncing: isBookmarkSyncing } = useBookmarks();
+  const { isSyncing: isDecksSyncing } = useDecks();
   const { isDark, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const isSyncing = isBookmarkSyncing || isDecksSyncing;
 
   return (
     <>
@@ -36,7 +44,7 @@ export function Navbar() {
               </div>
             </Link>
 
-            {/* Right Controls: Stats & Offline & Theme Switcher */}
+            {/* Right Controls: Auth & Stats & Offline & Theme Switcher */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Offline Cache & Mode Button */}
               <button
@@ -49,12 +57,47 @@ export function Navbar() {
               </button>
 
               {/* Quick Stats Pill */}
-              <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
+              <div className="hidden md:flex items-center gap-1.5 sm:gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-2xl bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
                 <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                 <span>
-                  Saved: <strong className="text-amber-600 dark:text-amber-400">{totalBookmarks}</strong> <span className="hidden sm:inline">words</span>
+                  Saved: <strong className="text-amber-600 dark:text-amber-400">{totalBookmarks}</strong>
                 </span>
               </div>
+
+              {/* User Authentication Chip / Login Button */}
+              {user ? (
+                <div className="flex items-center gap-1.5">
+                  <div 
+                    className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-2xl bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-300"
+                    title={isSyncing ? "กำลังซิงก์ข้อมูลกับ Cloudflare D1..." : "ข้อมูลซิงก์กับ Cloudflare D1 เรียบร้อย"}
+                  >
+                    <Cloud className={`w-3.5 h-3.5 ${isSyncing ? 'text-amber-500 animate-pulse' : 'text-emerald-500'}`} />
+                    <span className="text-[10px]">{isSyncing ? 'Syncing...' : 'D1 Synced'}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-bold text-rose-700 dark:text-rose-300">
+                    <div className="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center text-[10px] uppercase">
+                      {user.username ? user.username.charAt(0) : 'U'}
+                    </div>
+                    <span className="hidden sm:inline max-w-[100px] truncate">{user.username}</span>
+                    <button
+                      onClick={logout}
+                      className="p-1 rounded-lg hover:bg-rose-500/20 text-rose-600 dark:text-rose-300 transition-colors ml-0.5"
+                      title="ออกจากระบบ (Sign Out)"
+                    >
+                      <LogOut className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 sm:py-1.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all active:scale-95"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>เข้าสู่ระบบ</span>
+                </button>
+              )}
 
               {/* Theme Switcher Toggle */}
               <button
@@ -72,6 +115,12 @@ export function Navbar() {
           </div>
         </div>
       </header>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
 
       {/* Offline Modal */}
       <OfflineManagerModal

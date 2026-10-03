@@ -1,13 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from './useAuth';
 
 const DECK_STORAGE_KEY = 'bihua_decks';
 
 function getSavedDecks() {
   try {
     const saved = localStorage.getItem(DECK_STORAGE_KEY);
-    if (!saved) {
-      return [];
-    }
+    if (!saved) return [];
     const parsed = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
     
@@ -24,7 +23,76 @@ function getSavedDecks() {
 }
 
 export function useDecks() {
+  const { user } = useAuth();
   const [decks, setDecks] = useState(getSavedDecks);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const initialSyncDoneRef = useRef(false);
+
+  // Sync decks with Cloudflare D1 when user logs in
+  useEffect(() => {
+    if (!user) {
+      initialSyncDoneRef.current = false;
+      return;
+    }
+
+    let isCancelled = false;
+
+    async function syncDecksWithCloud() {
+      setIsSyncing(true);
+      try {
+        const res = await fetch('/api/sync/decks', {
+          credentials: 'include'
+        });
+
+        if (!res.ok) throw new Error('Failed to fetch decks from cloud');
+
+        const data = await res.json();
+        const remoteDecks = data.decks || [];
+        const localDecks = getSavedDecks();
+
+        // Merge remote and local by deck ID
+        const deckMap = new Map();
+        remoteDecks.forEach(d => deckMap.set(d.id, d));
+        localDecks.forEach(d => {
+          if (!deckMap.has(d.id)) {
+            deckMap.set(d.id, d);
+          }
+        });
+
+        const mergedDecks = Array.from(deckMap.values());
+
+        if (!isCancelled) {
+          localStorage.setItem(DECK_STORAGE_KEY, JSON.stringify(mergedDecks));
+          setDecks(mergedDecks);
+          window.dispatchEvent(new Event('bihua_decks_updated'));
+        }
+
+        // If local had decks not on remote, push them to D1
+        const missingOnRemote = localDecks.filter(l => !remoteDecks.some(r => r.id === l.id));
+        if (missingOnRemote.length > 0) {
+          await fetch('/api/sync/decks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decks: mergedDecks }),
+            credentials: 'include'
+          });
+        }
+      } catch (err) {
+        console.warn('Decks cloud sync error:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsSyncing(false);
+          initialSyncDoneRef.current = true;
+        }
+      }
+    }
+
+    syncDecksWithCloud();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -49,7 +117,17 @@ export function useDecks() {
       setDecks(newDecks);
       window.dispatchEvent(new Event('bihua_decks_updated'));
     } catch (err) {
-      console.error('Error saving decks:', err);
+      console.error('Error saving decks to local storage:', err);
+    }
+
+    // Sync all decks to D1 if user is logged in
+    if (user) {
+      fetch('/api/sync/decks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decks: newDecks }),
+        credentials: 'include'
+      }).catch(err => console.warn('Cloud sync error on save decks:', err));
     }
   };
 
@@ -65,7 +143,7 @@ export function useDecks() {
     };
     saveDecks([...current, newDeck]);
     return newDeck;
-  }, []);
+  }, [user]);
 
   const updateDeck = useCallback((deckId, updates) => {
     const current = getSavedDecks();
@@ -80,13 +158,20 @@ export function useDecks() {
       return d;
     });
     saveDecks(updated);
-  }, []);
+  }, [user]);
 
   const deleteDeck = useCallback((deckId) => {
     const current = getSavedDecks();
     const updated = current.filter(d => d.id !== deckId);
     saveDecks(updated);
-  }, []);
+
+    if (user) {
+      fetch(`/api/sync/deck/${encodeURIComponent(deckId)}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      }).catch(err => console.warn('Cloud sync error on delete deck:', err));
+    }
+  }, [user]);
 
   const addWordsToDeck = useCallback((deckId, wordsToAdd) => {
     const current = getSavedDecks();
@@ -100,7 +185,7 @@ export function useDecks() {
       return d;
     });
     saveDecks(updated);
-  }, []);
+  }, [user]);
 
   const removeWordFromDeck = useCallback((deckId, wordToRemove) => {
     const current = getSavedDecks();
@@ -114,7 +199,7 @@ export function useDecks() {
       return d;
     });
     saveDecks(updated);
-  }, []);
+  }, [user]);
 
   return {
     decks,
@@ -122,7 +207,8 @@ export function useDecks() {
     updateDeck,
     deleteDeck,
     addWordsToDeck,
-    removeWordFromDeck
+    removeWordFromDeck,
+    isSyncing
   };
 }
 
